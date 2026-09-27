@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>PA-ECU Tuner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notebook" class="oculto">
+        <div class="tela">
+            <header>
+                <div class="marca">
+                    <span class="logo">PA</span>
+                    <div>
+                        <h1>ECU Tuner</h1>
+                        <small>Pista &amp; Asfalto Performance · v2.1</small>
+                    </div>
+                </div>
+                <div class="carro">
+                    <div class="placa" id="placa">---</div>
+                    <div class="modelo" id="modelo">---</div>
+                </div>
+            </header>
+
+            <div class="status">
+                <span class="stage" id="stage">STAGE -</span>
+                <span class="peca" data-peca="turbo">Turbo</span>
+                <span class="peca" data-peca="intercooler">Intercooler</span>
+                <span class="peca" data-peca="pistao">Pistão forjado</span>
+                <span class="peca" data-peca="cabecote">Cabeçote</span>
+                <span class="conexao"><i></i> ECU conectada</span>
+            </div>
+
+            <main>
+                <section class="ajustes">
+                    <div class="ajuste" data-campo="turbo">
+                        <div class="rotulo">
+                            <label>Pressão do turbo</label>
+                            <output>0.0 bar</output>
+                        </div>
+                        <input type="range">
+                        <p class="dica">Mais pressão = mais força. Sem intercooler o motor sofre em dobro.</p>
+                    </div>
+                    <div class="ajuste" data-campo="ignicao">
+                        <div class="rotulo">
+                            <label>Avanço de ignição</label>
+                            <output>0°</output>
+                        </div>
+                        <input type="range">
+                        <p class="dica">Avanço positivo dá resposta, mas causa batida de pino.</p>
+                    </div>
+                    <div class="ajuste" data-campo="limitador">
+                        <div class="rotulo">
+                            <label>Limitador de giro</label>
+                            <output>7000 rpm</output>
+                        </div>
+                        <input type="range">
+                        <p class="dica">Giro mais alto = mais velocidade final. Pistão forjado aguenta melhor.</p>
+                    </div>
+                    <div class="ajuste" data-campo="mistura">
+                        <div class="rotulo">
+                            <label>Mistura ar/combustível (AFR)</label>
+                            <output>12.5</output>
+                        </div>
+                        <input type="range">
+                        <p class="dica">Rica (baixo) protege o motor. Pobre (alto) dá força e esquenta.</p>
+                    </div>
+                </section>
+
+                <section class="resultado">
+                    <div class="grafico">
+                        <div class="legenda">
+                            <span class="original">Original</span>
+                            <span class="novo">Mapa novo</span>
+                        </div>
+                        <canvas id="curva" width="400" height="190"></canvas>
+                    </div>
+
+                    <div class="barras">
+                        <div class="barra" id="b-forca"><span>Aceleração</span><div><i></i></div><b>+0%</b></div>
+                        <div class="barra" id="b-vmax"><span>Velocidade final</span><div><i></i></div><b>+0%</b></div>
+                        <div class="barra" id="b-giro"><span>Resposta</span><div><i></i></div><b>+0%</b></div>
+                    </div>
+
+                    <div class="risco" id="risco">
+                        <div class="risco-topo">
+                            <span>Risco ao motor</span>
+                            <b id="risco-valor">0%</b>
+                        </div>
+                        <div class="risco-trilho"><i id="risco-barra"></i></div>
+                        <small id="risco-texto">Mapa seguro</small>
+                    </div>
+                </section>
+            </main>
+
+            <footer>
+                <button id="btn-original" class="sec">Mapa original</button>
+                <div class="espaco"></div>
+                <button id="btn-fechar" class="sec">Cancelar</button>
+                <button id="btn-gravar" class="pri">Gravar na ECU</button>
+            </footer>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
