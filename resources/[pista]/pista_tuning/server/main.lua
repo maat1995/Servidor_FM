@@ -1414,9 +1414,6 @@ end)
 -- tipo -> quem pode (true = só mecânico em serviço)
 local REPAROS = {
     pneu = { mecanico = false },
-    porta = { mecanico = true },
-    capo = { mecanico = true },
-    portamalas = { mecanico = true },
     funilaria = { mecanico = true },
     emergencia = { mecanico = false },
     avancado = { mecanico = true },

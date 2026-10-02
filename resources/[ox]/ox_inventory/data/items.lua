@@ -751,24 +751,9 @@ return {
         label = 'Macaco hidráulico', weight = 5000, stack = false,
         description = 'Levanta o carro para trocar pneu. Desgasta com o uso.',
     },
-    ['peca_porta'] = {
-        label = 'Porta', weight = 15000, stack = true, close = true,
-        description = 'Só mecânico. Mire no lugar da porta que falta com o Alt.',
-        client = { export = 'pista_tuning.usarPecaLataria' },
-    },
-    ['peca_capo'] = {
-        label = 'Capô', weight = 12000, stack = true, close = true,
-        description = 'Só mecânico. Mire na frente do carro com o Alt.',
-        client = { export = 'pista_tuning.usarPecaLataria' },
-    },
-    ['peca_portamalas'] = {
-        label = 'Porta-malas', weight = 12000, stack = true, close = true,
-        description = 'Só mecânico. Mire na traseira do carro com o Alt.',
-        client = { export = 'pista_tuning.usarPecaLataria' },
-    },
     ['kit_funilaria'] = {
         label = 'Kit de funilaria', weight = 6000, stack = true, close = true,
-        description = 'Massa, lixa e tinta. Só mecânico: tira amassados, arranhões e troca os vidros.',
+        description = 'Só mecânico. Tira amassados e arranhões, troca os vidros e recoloca porta, capô e porta-malas.',
         client = { export = 'pista_tuning.usarFunilaria' },
     },
     ['kit_retifica'] = {

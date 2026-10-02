@@ -1,4 +1,4 @@
--- pista_tuning - consertos (pneu, lataria, funilaria, kits) e empurrar o carro
+-- pista_tuning - consertos (pneu, funilaria, kits) e empurrar o carro
 
 local ANIM_RODA = { dict = 'anim@amb@clubhouse@tutorial@bkr_tut_ig3@', clip = 'machinic_loop_mechandplayer' }
 local ANIM_LATARIA = { dict = 'mini@repair', clip = 'fixing_a_ped' }
@@ -13,16 +13,6 @@ local PNEUS = {
     { bone = 'wheel_lr', pneu = 4, nome = 'traseiro esquerdo' },
     { bone = 'wheel_rr', pneu = 5, nome = 'traseiro direito' },
 }
--- Portas: osso -> índice da porta e o item que repõe
-local PORTAS = {
-    { bone = 'door_dside_f', porta = 0, tipo = 'porta', nome = 'porta dianteira esquerda' },
-    { bone = 'door_pside_f', porta = 1, tipo = 'porta', nome = 'porta dianteira direita' },
-    { bone = 'door_dside_r', porta = 2, tipo = 'porta', nome = 'porta traseira esquerda' },
-    { bone = 'door_pside_r', porta = 3, tipo = 'porta', nome = 'porta traseira direita' },
-    { bone = 'bonnet', porta = 4, tipo = 'capo', nome = 'capô' },
-    { bone = 'boot', porta = 5, tipo = 'portamalas', nome = 'porta-malas' },
-}
-
 local function ossos(lista)
     local r = {}
     for i, v in ipairs(lista) do r[i] = v.bone end
@@ -78,38 +68,30 @@ local function executar(fn, ...)
 end
 
 ---------------------------------------------------------------------
--- Conserta uma coisa só: o GTA só repõe peças consertando tudo, então
--- guarda o estado do carro, conserta e quebra de novo o que continua quebrado.
+-- Funilaria: o GTA só repõe porta/capô/porta-malas consertando o carro todo,
+-- então guarda o que não é lataria (motor, tanque, pneus, rodas do elevador),
+-- conserta e devolve esse estado.
 ---------------------------------------------------------------------
-function ConsertarMantendo(veh, portaConsertada)
-    local motor, lataria, tanque = GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), GetVehiclePetrolTankHealth(veh)
+local function consertarLataria(veh)
+    local motor, tanque = GetVehicleEngineHealth(veh), GetVehiclePetrolTankHealth(veh)
     local combustivel, sujeira = GetVehicleFuelLevel(veh), GetVehicleDirtLevel(veh)
-
-    local portas = {}
-    for i = 0, 5 do
-        if i ~= portaConsertada and IsVehicleDoorDamaged(veh, i) then portas[#portas + 1] = i end
-    end
     local pneus = {}
     for _, p in ipairs(PNEUS) do
         if IsVehicleTyreBurst(veh, p.pneu, false) then
             pneus[#pneus + 1] = { p.pneu, IsVehicleTyreBurst(veh, p.pneu, true) }
         end
     end
-    local vidros = {}
-    for i = 0, 7 do
-        if not IsVehicleWindowIntact(veh, i) then vidros[#vidros + 1] = i end
-    end
 
     SetVehicleFixed(veh)
+    SetVehicleDeformationFixed(veh)
+    RemoveDecalsFromVehicle(veh)
 
+    SetVehicleBodyHealth(veh, 1000.0)
     SetVehicleEngineHealth(veh, motor)
-    SetVehicleBodyHealth(veh, lataria)
     SetVehiclePetrolTankHealth(veh, tanque)
     SetVehicleFuelLevel(veh, combustivel)
     SetVehicleDirtLevel(veh, sujeira)
-    for _, i in ipairs(portas) do SetVehicleDoorBroken(veh, i, true) end
     for _, p in ipairs(pneus) do SetVehicleTyreBurst(veh, p[1], p[2], 1000.0) end
-    for _, i in ipairs(vidros) do SmashVehicleWindow(veh, i) end
     -- rodas tiradas no elevador continuam fora
     for chave in pairs(Entity(veh).state.pista_rodas or {}) do
         BreakOffVehicleWheel(veh, tonumber(chave:sub(2)), false, true, true, false)
@@ -140,26 +122,18 @@ local function trocarPneu(veh, roda)
     end) then Avisar('Pneu trocado', 'success') end
 end
 
-local function instalarLataria(veh, porta)
-    if GetVehicleBodyHealth(veh) < Config.reparo.lataMinimaParaPecas then
-        return Avisar('A lataria está muito amassada: faça a funilaria antes de colocar as peças', 'error', 6000)
-    end
-    if consertar(veh, porta.tipo, ('Instalando %s...'):format(porta.nome), ANIM_LATARIA, function()
-        ConsertarMantendo(veh, porta.porta)
-    end) then Avisar(('%s instalado(a)'):format(porta.nome:gsub('^%l', string.upper)), 'success') end
-end
-
 local function funilaria(veh)
-    if consertar(veh, 'funilaria', 'Funilaria: desamassando, lixando e pintando...', ANIM_LATARIA, function()
-        SetVehicleDeformationFixed(veh)
-        SetVehicleBodyHealth(veh, 1000.0)
-        RemoveDecalsFromVehicle(veh)
-        for i = 0, 7 do FixVehicleWindow(veh, i) end
-    end) then Avisar('Lataria e vidros como novos', 'success') end
+    if consertar(veh, 'funilaria', 'Funilaria: desamassando, recolocando peças e pintando...', ANIM_LATARIA, function()
+        consertarLataria(veh)
+    end) then Avisar('Lataria, vidros, portas, capô e porta-malas como novos', 'success') end
 end
 
 local function precisaFunilaria(veh)
-    return GetVehicleBodyHealth(veh) < 995.0
+    if GetVehicleBodyHealth(veh) < 995.0 then return true end
+    for i = 0, 5 do
+        if IsVehicleDoorDamaged(veh, i) then return true end -- porta, capô ou porta-malas faltando
+    end
+    return false
 end
 
 ---------------------------------------------------------------------
@@ -181,29 +155,6 @@ CreateThread(function()
             onSelect = function(data)
                 local roda = maisPerto(data.entity, PNEUS, data.coords)
                 if roda then executar(trocarPneu, data.entity, roda) end
-            end,
-        },
-        {
-            name = 'pista_reparo_lataria',
-            icon = 'fa-solid fa-car-side',
-            label = 'Instalar peça da lataria',
-            bones = ossos(PORTAS),
-            distance = 2.5,
-            canInteract = function(entity, _, coords, _, osso)
-                if ocupado or cache.vehicle or not MecanicoEmServico() then return false end
-                local porta = pelaBone(entity, PORTAS, osso, coords)
-                return porta ~= nil and IsVehicleDoorDamaged(entity, porta.porta)
-                    and TemItem(Config.reparo[porta.tipo].item)
-            end,
-            onSelect = function(data)
-                local veh = data.entity
-                -- a porta que está faltando mais perto de onde mirou
-                local faltando = {}
-                for _, p in ipairs(PORTAS) do
-                    if IsVehicleDoorDamaged(veh, p.porta) then faltando[#faltando + 1] = p end
-                end
-                local porta = maisPerto(veh, faltando, data.coords)
-                if porta then executar(instalarLataria, veh, porta) end
             end,
         },
         {
@@ -253,7 +204,6 @@ local function dicaAlt(texto)
     end
 end
 exports('usarPneu', dicaAlt('Mire no pneu furado com o Alt e escolha "Trocar pneu" (precisa do macaco).'))
-exports('usarPecaLataria', dicaAlt('Mire no lugar da peça que falta com o Alt e escolha "Instalar peça da lataria".'))
 exports('usarFunilaria', dicaAlt('Mire no carro com o Alt e escolha "Fazer funilaria".'))
 
 ---------------------------------------------------------------------
@@ -410,5 +360,5 @@ end)
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     pararDeEmpurrar()
-    exports.ox_target:removeGlobalVehicle({ 'pista_reparo_pneu', 'pista_reparo_lataria', 'pista_reparo_funilaria' })
+    exports.ox_target:removeGlobalVehicle({ 'pista_reparo_pneu', 'pista_reparo_funilaria' })
 end)

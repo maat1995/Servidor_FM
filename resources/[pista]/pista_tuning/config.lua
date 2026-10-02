@@ -57,12 +57,10 @@ Config.ferramentas = {
 -- CONSERTOS (pneu, lataria, funilaria, kits de emergência, retífica)
 ---------------------------------------------------------------------
 -- Pneu e kit de emergência: qualquer pessoa. O resto: mecânico em serviço.
--- Tudo pelo Alt mirando no carro (pneu na roda, porta/capô/porta-malas no lugar da peça).
+-- Pneu e funilaria pelo Alt mirando no carro; os kits de motor pelo inventário.
 Config.reparo = {
     pneu       = { item = 'pneu', tempo = 12000 },
-    porta      = { item = 'peca_porta', tempo = 15000 },
-    capo       = { item = 'peca_capo', tempo = 15000 },
-    portamalas = { item = 'peca_portamalas', tempo = 15000 },
+    -- Funilaria: amassados, arranhões, vidros e porta/capô/porta-malas que faltam
     funilaria  = { item = 'kit_funilaria', tempo = 30000 },
     -- Kit de emergência: o motor volta a ligar com pouca vida, só para chegar na oficina
     emergencia = { item = 'repairkit', tempo = 15000, vidaMotor = 350.0 },
@@ -70,8 +68,6 @@ Config.reparo = {
     avancado   = { item = 'advancedrepairkit', tempo = 20000, vidaMotor = 650.0 },
     -- Retífica: no motor aberto na bancada, deixa o motor novo (1000) ao recolocar
     retifica   = { item = 'kit_retifica', tempo = 30000, xp = 30 },
-    -- Peças de lataria só entram com a lataria boa (faça a funilaria antes)
-    lataMinimaParaPecas = 900.0,
 }
 
 ---------------------------------------------------------------------
