@@ -56,7 +56,13 @@ end
 lib.callback.register('pista_estetica:server:abrir', function(source, netId, tipo)
     local veh, err = validar(source, netId, tipo)
     if not veh then return false, err end
-    if GetPedInVehicleSeat(veh, -1) ~= 0 then return false, 'Peça para o motorista sair do carro' end
+    local motorista = GetPedInVehicleSeat(veh, -1)
+    if tipo == 'estetica' then
+        -- estética: o mecânico faz de dentro do carro, no banco do motorista
+        if motorista ~= GetPlayerPed(source) then return false, 'Entre no carro, no banco do motorista' end
+    elseif motorista ~= 0 then
+        return false, 'Peça para o motorista sair do carro'
+    end
     return true
 end)
 

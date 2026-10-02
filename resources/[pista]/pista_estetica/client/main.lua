@@ -457,7 +457,7 @@ local function encerrar(manter)
     if DoesEntityExist(s.veh) then
         SetVehicleLights(s.veh, 0)
         SetVehicleDoorShut(s.veh, 4, false)
-        SetVehicleEngineOn(s.veh, false, true, true)
+        if s.tipo == 'pintura' then SetVehicleEngineOn(s.veh, false, true, true) end
         FreezeEntityPosition(s.veh, false)
     end
     pararCamera()
@@ -589,7 +589,7 @@ local function trabalhar(s)
         lib.progressCircle({
             duration = Config.tempos.estetica, label = 'Montando as peças...', position = 'bottom',
             canCancel = false, disable = { move = true, car = true, combat = true },
-            anim = { dict = 'mini@repair', clip = 'fixing_a_ped' },
+            anim = not cache.vehicle and { dict = 'mini@repair', clip = 'fixing_a_ped' } or nil,
         })
     end
     if DoesEntityExist(veh) then
@@ -645,6 +645,13 @@ end)
 -- Locais: [E] com o carro dentro (mecânico a pé)
 ---------------------------------------------------------------------
 local function carroNoLocal(l)
+    if l.tipo == 'estetica' then
+        -- estética: o mecânico está dirigindo o carro, parado no local
+        local veh = cache.vehicle
+        if veh and cache.seat == -1 and #(GetEntityCoords(veh) - l.coords.xyz) <= (l.raio or 4.0) then return veh end
+        return nil
+    end
+    if cache.vehicle then return nil end
     local veh = lib.getClosestVehicle(l.coords.xyz, l.raio or 4.0, false)
     if veh and GetPedInVehicleSeat(veh, -1) == 0 then return veh end
 end
@@ -672,7 +679,7 @@ CreateThread(function()
             nearby = function()
                 if GetGameTimer() >= proxima then
                     proxima = GetGameTimer() + 300
-                    vehCache = (not sessao and not cache.vehicle and souMecanico()) and carroNoLocal(l) or nil
+                    vehCache = (not sessao and souMecanico()) and carroNoLocal(l) or nil
                 end
                 local veh = (not sessao and vehCache and DoesEntityExist(vehCache)) and vehCache or nil
                 if not veh then
@@ -702,6 +709,10 @@ end)
 
 -- /estetica [pintura|estetica] (admin): abre no carro mais perto, em qualquer lugar
 RegisterNetEvent('pista_estetica:client:abrirTeste', function(tipo)
+    if tipo == 'estetica' then
+        if not cache.vehicle or cache.seat ~= -1 then return Avisar('Entre no carro, no banco do motorista', 'error') end
+        return abrir(tipo, cache.vehicle)
+    end
     if cache.vehicle then return Avisar('Saia do carro e fique do lado dele', 'error') end
     abrir(tipo, lib.getClosestVehicle(GetEntityCoords(cache.ped), 6.0, false))
 end)
