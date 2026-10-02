@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Pista Estética</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="oculto">
+        <!-- área livre: arrastar gira a câmera, rodinha aproxima -->
+        <div id="palco"></div>
+        <div id="dica">Arraste para girar · rodinha do mouse para aproximar</div>
+
+        <aside id="painel">
+            <header>
+                <div class="marca">
+                    <span class="logo">PA</span>
+                    <div>
+                        <h1 id="titulo">Estética</h1>
+                        <small id="subtitulo">Pista &amp; Asfalto</small>
+                    </div>
+                </div>
+                <div class="carro">
+                    <div class="placa" id="placa">---</div>
+                    <div class="modelo" id="modelo">---</div>
+                </div>
+            </header>
+
+            <!-- Pintura -->
+            <section id="modo-pintura" class="modo oculto">
+                <nav id="alvos" class="alvos"></nav>
+
+                <div id="bloco-cor">
+                    <div class="segmento" id="seg-cor">
+                        <button data-aba="rgb" class="ativo">Cor personalizada</button>
+                        <button data-aba="fabrica">Cores de fábrica</button>
+                    </div>
+
+                    <div id="aba-rgb" class="aba">
+                        <div class="seletor">
+                            <canvas id="sv" width="360" height="170"></canvas>
+                            <i id="sv-marca"></i>
+                        </div>
+                        <input type="range" id="matiz" min="0" max="360" step="1" value="0">
+                        <div class="linha-hex">
+                            <span class="amostra" id="amostra"></span>
+                            <label for="hex">HEX</label>
+                            <input id="hex" maxlength="7" spellcheck="false" value="#000000">
+                            <span class="rgb" id="rgb-texto">0 · 0 · 0</span>
+                        </div>
+                        <div class="rotulo-sec">Acabamento</div>
+                        <div class="chips" id="acabamentos">
+                            <button data-f="0">Normal</button>
+                            <button data-f="1">Metálico</button>
+                            <button data-f="2">Perolado</button>
+                            <button data-f="3">Fosco</button>
+                            <button data-f="4">Metal</button>
+                            <button data-f="5">Cromado</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="aba-fabrica" class="aba oculto"></div>
+            </section>
+
+            <!-- Estética -->
+            <section id="modo-estetica" class="modo oculto">
+                <nav id="categorias" class="categorias"></nav>
+                <div id="grupos" class="grupos"></div>
+            </section>
+
+            <footer>
+                <button id="btn-carrinho" class="carrinho-resumo">
+                    <span id="carrinho-qtd">Nada mudado ainda</span>
+                    <b id="carrinho-total">$0</b>
+                </button>
+                <ul id="carrinho-lista" class="carrinho-lista oculto"></ul>
+                <div class="acoes">
+                    <button id="btn-cancelar" class="sec">Cancelar</button>
+                    <button id="btn-cobrar" class="pri" disabled>Cobrar cliente</button>
+                </div>
+            </footer>
+
+            <!-- Cobrança -->
+            <div id="cobranca" class="cobranca oculto">
+                <div class="caixa">
+                    <h2>Quem vai pagar?</h2>
+                    <p class="total-cobranca">Total: <b id="cobranca-total">$0</b></p>
+                    <div id="clientes" class="clientes"></div>
+                    <p id="cobranca-status" class="status-cobranca"></p>
+                    <div class="acoes">
+                        <button id="btn-voltar" class="sec">Voltar</button>
+                        <button id="btn-enviar" class="pri" disabled>Enviar cobrança</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
