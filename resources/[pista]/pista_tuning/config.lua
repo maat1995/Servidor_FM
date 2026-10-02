@@ -47,6 +47,41 @@ Config.ferramentas = {
         item = 'torquimetro', label = 'Torquímetro',
         desgaste = { abrir = 4, peca = 2 },    -- abrir/fechar motor | peças internas
     },
+    macaco = {
+        item = 'macaco', label = 'Macaco hidráulico',
+        desgaste = { pneu = 3 },               -- troca de pneu
+    },
+}
+
+---------------------------------------------------------------------
+-- CONSERTOS (pneu, lataria, funilaria, kits de emergência, retífica)
+---------------------------------------------------------------------
+-- Pneu e kit de emergência: qualquer pessoa. O resto: mecânico em serviço.
+-- Tudo pelo Alt mirando no carro (pneu na roda, porta/capô/porta-malas no lugar da peça).
+Config.reparo = {
+    pneu       = { item = 'pneu', tempo = 12000 },
+    porta      = { item = 'peca_porta', tempo = 15000 },
+    capo       = { item = 'peca_capo', tempo = 15000 },
+    portamalas = { item = 'peca_portamalas', tempo = 15000 },
+    funilaria  = { item = 'kit_funilaria', tempo = 30000 },
+    -- Kit de emergência: o motor volta a ligar com pouca vida, só para chegar na oficina
+    emergencia = { item = 'repairkit', tempo = 15000, vidaMotor = 350.0 },
+    -- Kit avançado (mecânico): motor até a metade
+    avancado   = { item = 'advancedrepairkit', tempo = 20000, vidaMotor = 650.0 },
+    -- Retífica: no motor aberto na bancada, deixa o motor novo (1000) ao recolocar
+    retifica   = { item = 'kit_retifica', tempo = 30000, xp = 30 },
+    -- Peças de lataria só entram com a lataria boa (faça a funilaria antes)
+    lataMinimaParaPecas = 900.0,
+}
+
+---------------------------------------------------------------------
+-- EMPURRAR O CARRO (motor desligado ou fundido, sem ninguém no volante)
+---------------------------------------------------------------------
+Config.empurrar = {
+    tecla = 'H',          -- o jogador pode trocar em Configurações > Atalhos > FiveM
+    velocidade = 1.1,     -- m/s enquanto segura W
+    angulo = 25.0,        -- quanto A/D viram o volante
+    inverterVolante = false, -- se A e D virarem ao contrário, troque para true
 }
 
 ---------------------------------------------------------------------

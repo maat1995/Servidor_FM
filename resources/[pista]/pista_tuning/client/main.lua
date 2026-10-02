@@ -132,6 +132,12 @@ local function aplicarPreparacao(veh)
     end
     if AplicarSuspensao then AplicarSuspensao(veh, dados) end
 
+    -- Motor retificado na bancada: volta novo quando o carro tem motor de novo
+    if dados.motorRetificado and not dados.motor then
+        SetVehicleEngineHealth(veh, 1000.0)
+        TriggerServerEvent('pista_tuning:server:retificaAplicada', VehToNet(veh))
+    end
+
     SetVehicleUndriveable(veh, dados.motor ~= nil)
 end
 

@@ -255,13 +255,15 @@ return {
     },
 
     ['repairkit'] = {
-        label = 'Repair Kit',
-        weight = 2500,
+        label = 'Kit de emergência', weight = 2500, close = true,
+        description = 'Conserto rápido de rua: o motor volta a ligar com pouca vida. Leve o carro a uma oficina.',
+        client = { export = 'pista_tuning.usarKitEmergencia' },
     },
 
     ['advancedrepairkit'] = {
-        label = 'Advanced Repair Kit',
-        weight = 4000,
+        label = 'Kit de reparo avançado', weight = 4000, close = true,
+        description = 'Só mecânico: deixa o motor com metade da vida.',
+        client = { export = 'pista_tuning.usarKitAvancado', image = 'advancedkit.png' },
     },
 
     ['diamond_ring'] = {
@@ -739,6 +741,40 @@ return {
         label = 'Suspensão regulável', weight = 12000, stack = true, close = true,
         description = 'Kit coilover (rosca). Instale nas 4 rodas no elevador; depois regule com /suspensao.',
         client = { export = 'pista_tuning.usarSuspensao' },
+    },
+    ['pneu'] = {
+        label = 'Pneu', weight = 8000, stack = true, close = true,
+        description = 'Mire no pneu furado com o Alt e troque. Precisa do macaco.',
+        client = { export = 'pista_tuning.usarPneu' },
+    },
+    ['macaco'] = {
+        label = 'Macaco hidráulico', weight = 5000, stack = false,
+        description = 'Levanta o carro para trocar pneu. Desgasta com o uso.',
+    },
+    ['peca_porta'] = {
+        label = 'Porta', weight = 15000, stack = true, close = true,
+        description = 'Só mecânico. Mire no lugar da porta que falta com o Alt.',
+        client = { export = 'pista_tuning.usarPecaLataria' },
+    },
+    ['peca_capo'] = {
+        label = 'Capô', weight = 12000, stack = true, close = true,
+        description = 'Só mecânico. Mire na frente do carro com o Alt.',
+        client = { export = 'pista_tuning.usarPecaLataria' },
+    },
+    ['peca_portamalas'] = {
+        label = 'Porta-malas', weight = 12000, stack = true, close = true,
+        description = 'Só mecânico. Mire na traseira do carro com o Alt.',
+        client = { export = 'pista_tuning.usarPecaLataria' },
+    },
+    ['kit_funilaria'] = {
+        label = 'Kit de funilaria', weight = 6000, stack = true, close = true,
+        description = 'Massa, lixa e tinta. Só mecânico: tira amassados, arranhões e troca os vidros.',
+        client = { export = 'pista_tuning.usarFunilaria' },
+    },
+    ['kit_retifica'] = {
+        label = 'Kit de retífica', weight = 10000, stack = true, close = true,
+        description = 'Use no motor aberto na bancada. O motor volta novo ao ser recolocado.',
+        client = { export = 'pista_tuning.usarRetifica' },
     },
     ['jogo_soquetes'] = {
         label = 'Jogo de soquetes', weight = 3000, stack = false,

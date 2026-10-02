@@ -18,13 +18,8 @@ local menu = {
 }
 
 local function main()
-    if GetVehicleBodyHealth(vehicle) < 1000.0 then
-        return {{
-            label = locale('menus.main.repair'),
-            description = ('%s%d'):format(config.currency, math.ceil(1000 - GetVehicleBodyHealth(vehicle))),
-            close = true,
-        }}
-    end
+    -- Pista & Asfalto: sem conserto instantâneo aqui. Pneu, lataria, funilaria e motor
+    -- são consertados com os itens do pista_tuning (mecânico).
 
     local options = {}
 

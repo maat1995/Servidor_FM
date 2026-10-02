@@ -33,6 +33,15 @@ return {
 			{ name = 'cambio_esportivo', price = 1 },
 			{ name = 'cambio_competicao', price = 1 },
 			{ name = 'suspensao_regulavel', price = 1 },
+			{ name = 'pneu', price = 1 },
+			{ name = 'macaco', price = 1 },
+			{ name = 'peca_porta', price = 1 },
+			{ name = 'peca_capo', price = 1 },
+			{ name = 'peca_portamalas', price = 1 },
+			{ name = 'kit_funilaria', price = 1 },
+			{ name = 'kit_retifica', price = 1 },
+			{ name = 'repairkit', price = 1 },
+			{ name = 'advancedrepairkit', price = 1 },
 		}, locations = {
 			vec3(-344.27, -126.84, 38.01),
 		}, targets = {
@@ -104,7 +113,11 @@ return {
 		blip = {
 			id = 402, colour = 69, scale = 0.8
 		}, inventory = {
-			{ name = 'lockpick', price = 10 }
+			{ name = 'lockpick', price = 10 },
+			-- Pista & Asfalto: qualquer um compra para se virar na rua
+			{ name = 'pneu', price = 1 },
+			{ name = 'macaco', price = 1 },
+			{ name = 'repairkit', price = 1 },
 		}, locations = {
 			vec3(2748.0, 3473.0, 55.67),
 			vec3(342.99, -1298.26, 32.51)

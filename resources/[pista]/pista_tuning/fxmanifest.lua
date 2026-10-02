@@ -5,7 +5,7 @@ lua54 'yes'
 name 'pista_tuning'
 author 'Pista & Asfalto RP'
 description 'Sistema de preparação: peças como item, remap no notebook, instalado por mecânico especializado ou quem tem skill'
-version '0.6.0'
+version '0.7.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
@@ -24,6 +24,7 @@ client_scripts {
     'client/motor.lua',
     'client/elevador.lua',
     'client/suspensao.lua',
+    'client/reparo.lua',
 }
 
 server_scripts {

@@ -444,6 +444,24 @@ function InstalarNoMotorProximo(itemName)
     executar(instalarNoMotor, motor, itemName)
 end
 
+--- Kit de retífica (item): usado no motor aberto na bancada
+function RetificarMotorProximo()
+    if cache.vehicle then return Avisar('Saia do veículo', 'error') end
+    local motor = motorAbertoProximo()
+    if not motor then
+        return Avisar('A retífica é feita no motor aberto: leve o motor até a bancada e abra com o torquímetro', 'error', 7000)
+    end
+    if not TemFerramenta('torquimetro') then return Avisar('Você precisa do torquímetro', 'error') end
+    exports.ox_inventory:closeInventory()
+    executar(function()
+        if not Trabalhar(Config.reparo.retifica.tempo, 'Retificando o motor...', { anim = ANIM_AGACHADO }) then
+            return Avisar('Cancelado', 'error')
+        end
+        local ok, msg = lib.callback.await('pista_tuning:server:retificarMotor', false, ObjToNet(motor))
+        Avisar(msg, ok and 'success' or 'error', 6000)
+    end)
+end
+
 local function colocarNaBancada()
     local motor = carregando
     if not motor then return end

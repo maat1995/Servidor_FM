@@ -1407,3 +1407,83 @@ lib.addCommand('moverguincho', {
     print('[pista_tuning] ' .. linha)
     exports.qbx_core:Notify(source, linha, 'inform', 10000)
 end)
+
+---------------------------------------------------------------------
+-- Consertos: pneu, lataria, funilaria, kits de emergência e retífica
+---------------------------------------------------------------------
+-- tipo -> quem pode (true = só mecânico em serviço)
+local REPAROS = {
+    pneu = { mecanico = false },
+    porta = { mecanico = true },
+    capo = { mecanico = true },
+    portamalas = { mecanico = true },
+    funilaria = { mecanico = true },
+    emergencia = { mecanico = false },
+    avancado = { mecanico = true },
+}
+
+local function validarReparo(source, netId, tipo)
+    local regra, cfg = REPAROS[tipo], Config.reparo[tipo]
+    if not regra or not cfg then return nil, 'Conserto inválido' end
+    local veh, err = pegarVeiculo(source, netId, false)
+    if not veh then return nil, err end
+    if regra.mecanico and not ehMecanico(source, true) then
+        return nil, 'Só mecânico em serviço pode fazer isso'
+    end
+    if exports.ox_inventory:Search(source, 'count', cfg.item) < 1 then
+        local item = exports.ox_inventory:Items(cfg.item)
+        return nil, ('Você precisa de %s'):format(item and item.label or cfg.item)
+    end
+    if tipo == 'pneu' then
+        err = exigirFerramenta(source, 'macaco')
+        if err then return nil, err end
+    end
+    if (tipo == 'emergencia' or tipo == 'avancado') and dadosDoVeiculo(veh).motor then
+        return nil, 'Esse carro está sem motor'
+    end
+    return veh, nil, cfg
+end
+
+lib.callback.register('pista_tuning:server:podeReparar', function(source, netId, tipo)
+    local veh, err = validarReparo(source, netId, tipo)
+    return veh ~= nil, err
+end)
+
+--- Gasta o item; o cliente aplica o conserto no carro em seguida
+lib.callback.register('pista_tuning:server:reparar', function(source, netId, tipo)
+    local veh, err, cfg = validarReparo(source, netId, tipo)
+    if not veh then return false, err end
+    if not exports.ox_inventory:RemoveItem(source, cfg.item, 1) then
+        return false, 'Não foi possível usar o item'
+    end
+    if tipo == 'pneu' then gastarFerramenta(source, 'macaco', 'pneu') end
+    return true
+end)
+
+-- Retífica: no motor aberto na bancada. O motor volta novo quando for recolocado.
+lib.callback.register('pista_tuning:server:retificarMotor', function(source, netId)
+    local cfg = Config.reparo.retifica
+    local obj, err, st, dados = validarMotorAberto(source, netId, true)
+    if not obj then return false, err end
+    if dados.motorRetificado then return false, 'Esse motor já foi retificado' end
+    if not exports.ox_inventory:RemoveItem(source, cfg.item, 1) then
+        return false, 'Você precisa do kit de retífica'
+    end
+    dados.motorRetificado = true
+    salvar(st.plate, dados)
+    gastarFerramenta(source, 'torquimetro', 'peca')
+    darXP(source, cfg.xp)
+    return true, 'Motor retificado! Ele volta novo quando for recolocado no carro.'
+end)
+
+-- O motorista aplicou a vida do motor retificado: limpa a marca
+RegisterNetEvent('pista_tuning:server:retificaAplicada', function(netId)
+    local source = source
+    local veh = NetworkGetEntityFromNetworkId(netId or 0)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    if GetPedInVehicleSeat(veh, -1) ~= GetPlayerPed(source) then return end
+    local dados = dadosDoVeiculo(veh)
+    if not dados.motorRetificado or dados.motor then return end
+    dados.motorRetificado = nil
+    aplicarDados(veh, dados)
+end)
