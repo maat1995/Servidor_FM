@@ -1202,6 +1202,64 @@ lib.addCommand('servico', {
 end)
 
 ---------------------------------------------------------------------
+-- Admin: preparar tudo no máximo / voltar ao original (para testes)
+---------------------------------------------------------------------
+--- Carro em que o admin está, ou o mais perto (até 6 m)
+local function carroDoAdmin(source)
+    local ped = GetPlayerPed(source)
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh ~= 0 then return veh end
+    local eu, melhor, melhorDist = GetEntityCoords(ped), nil, 6.0
+    for _, v in ipairs(GetAllVehicles()) do
+        local d = #(GetEntityCoords(v) - eu)
+        if d < melhorDist then melhor, melhorDist = v, d end
+    end
+    return melhor
+end
+
+lib.addCommand('tunarmax', {
+    help = 'Instala tudo no máximo no carro (dentro ou do lado)',
+    restricted = 'group.admin',
+}, function(source)
+    local veh = carroDoAdmin(source)
+    if not veh then return exports.qbx_core:Notify(source, 'Nenhum carro por perto', 'error') end
+    local dados = dadosDoVeiculo(veh)
+    if dados.motor then return exports.qbx_core:Notify(source, 'Esse carro está sem motor: recoloque antes', 'error') end
+
+    dados.chip = 3
+    dados.turbo = true
+    dados.intercooler = true
+    dados.pistao = 'forjado'
+    dados.cabecote = 2
+    dados.junta = true
+    dados.bielas = true
+    dados.nitro = true
+    dados.nitroCarga = Config.nitro.cargaGarrafa
+    dados.freio = 2
+    dados.cambio = 2
+    dados.freioObra, dados.suspObra = nil, nil
+    dados.suspensao = true
+    dados.susp = NormalizarSusp(dados.susp or Config.suspensao.presets.Pista)
+    dados.remap = nil -- mapa original: ajuste no notebook
+    aplicarDados(veh, dados)
+    exports.qbx_core:Notify(source, ('Carro %s no máximo: Stage 3, turbo, motor forjado de corrida, nitro cheio, freio/câmbio de competição e suspensão regulável'):format(placaDo(veh)), 'success', 8000)
+end)
+
+lib.addCommand('tunarzerar', {
+    help = 'Tira toda a preparação do carro (volta ao original)',
+    restricted = 'group.admin',
+}, function(source)
+    local veh = carroDoAdmin(source)
+    if not veh then return exports.qbx_core:Notify(source, 'Nenhum carro por perto', 'error') end
+    local dados = dadosDoVeiculo(veh)
+    local motor = dados.motor -- se o motor estiver fora, continua fora
+    for k in pairs(dados) do dados[k] = nil end
+    dados.motor = motor
+    aplicarDados(veh, dados)
+    exports.qbx_core:Notify(source, ('Carro %s voltou ao original'):format(placaDo(veh)), 'success')
+end)
+
+---------------------------------------------------------------------
 -- Carregar o motor nos braços (vaga -> bancada)
 ---------------------------------------------------------------------
 local function motorNaMaoDe(source, netId)

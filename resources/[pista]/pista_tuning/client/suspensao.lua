@@ -86,7 +86,12 @@ CreateThread(function()
         end
         ativos = lista
         for veh in pairs(basesRodas) do
-            if not DoesEntityExist(veh) then basesRodas[veh] = nil end
+            if not DoesEntityExist(veh) then
+                basesRodas[veh] = nil
+            elseif not lista[veh] and not (previa and previa.veh == veh) then
+                restaurarVisual(veh) -- suspensão tirada (ou carro longe): volta ao original
+                basesRodas[veh] = nil
+            end
         end
         for veh in pairs(basesHandling) do
             if not DoesEntityExist(veh) then basesHandling[veh] = nil end
