@@ -74,6 +74,32 @@
     // ------------------------------------------------------------------
     // Abrir / fechar
     // ------------------------------------------------------------------
+    // Espiar: enquanto mexe num ajuste, o painel fica transparente para
+    // ver o carro; só o controle que está sendo mexido continua visível.
+    // ------------------------------------------------------------------
+    let timerEspiar = null;
+    let focoAtual = null;
+
+    function espiar(el, duracao) {
+        clearTimeout(timerEspiar);
+        if (focoAtual && focoAtual !== el) focoAtual.classList.remove('foco');
+        focoAtual = el || null;
+        if (focoAtual) focoAtual.classList.add('foco');
+        tela.classList.add('espiando');
+        if (duracao) timerEspiar = setTimeout(pararDeEspiar, duracao);
+    }
+
+    function pararDeEspiar() {
+        clearTimeout(timerEspiar);
+        tela.classList.remove('espiando');
+        if (focoAtual) focoAtual.classList.remove('foco');
+        focoAtual = null;
+    }
+
+    // soltar o mouse em qualquer lugar devolve o painel
+    window.addEventListener('pointerup', () => { if (focoAtual) timerEspiar = setTimeout(pararDeEspiar, 250); });
+
+    // ------------------------------------------------------------------
     function abrir(dados) {
         info = dados;
         document.getElementById('s-placa').textContent = dados.placa || '---';
@@ -83,7 +109,8 @@
             const i = el.querySelector('input');
             i.min = f.min; i.max = f.max; i.step = f.passo;
             i.value = dados.atual[el.dataset.campo];
-            i.oninput = () => { pintar(el); atualizar(); };
+            i.oninput = () => { pintar(el); atualizar(); espiar(el, 900); };
+            i.onpointerdown = () => espiar(el);
             pintar(el);
         });
         tela.classList.remove('oculto');
@@ -94,6 +121,7 @@
         if (!info) return;
         const v = valores();
         info = null;
+        pararDeEspiar();
         tela.classList.add('oculto');
         enviar(salvar ? 'suspSalvar' : 'suspFechar', v);
     }
@@ -106,9 +134,17 @@
 
     document.getElementById('s-btn-fechar').onclick = () => fechar(false);
     document.getElementById('s-btn-salvar').onclick = () => fechar(true);
-    document.getElementById('s-btn-padrao').onclick = () => info && definir(info.padrao);
+    document.getElementById('s-btn-padrao').onclick = () => {
+        if (!info) return;
+        definir(info.padrao);
+        espiar(null, 1800);
+    };
     tela.querySelectorAll('.preset').forEach(b => {
-        b.onclick = () => info && definir({ ...info.padrao, ...info.presets[b.dataset.preset] });
+        b.onclick = () => {
+            if (!info) return;
+            definir({ ...info.padrao, ...info.presets[b.dataset.preset] });
+            espiar(null, 1800); // some um instante para ver o carro mudar
+        };
     });
 
     // ------------------------------------------------------------------
