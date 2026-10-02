@@ -60,12 +60,12 @@ function Trabalhar(duracao, label, opts)
         label = label,
         position = 'bottom',
         useWhileDead = false,
-        canCancel = true,
+        canCancel = not opts.semCancelar,
         disable = { move = true, car = true, combat = true },
         anim = opts.anim or { dict = 'mini@repair', clip = 'fixing_a_ped' },
         prop = opts.prop,
     })
-    if opts.capo and DoesEntityExist(opts.capo) then SetVehicleDoorShut(opts.capo, 4, false) end
+    -- o capô continua aberto depois do serviço; o mecânico fecha quando terminar
     return ok
 end
 
@@ -88,8 +88,7 @@ local function somarEfeitos(dados)
     end
     if dados.turbo then soma(Config.efeitos.turbo) end
     if dados.intercooler then soma(Config.efeitos.intercooler) end
-    if dados.pistao then soma(Config.efeitos.pistao) end
-    if dados.cabecote then soma(Config.efeitos.cabecote[dados.cabecote]) end
+    soma(EfeitosMotor(dados))
     if dados.chip then soma(Config.efeitos.chip[dados.chip]) end
     if dados.remap then soma(CalcularRemap(dados.remap, dados)) end
     return total
@@ -113,10 +112,25 @@ local function aplicarPreparacao(veh)
     end
     ModifyVehicleTopSpeed(veh, 1.0) -- força o jogo a recalcular a velocidade final
 
-    if Config.ativarTurboVisual then
-        SetVehicleModKit(veh, 0)
-        if dados.turbo then ToggleVehicleMod(veh, 18, true) end
+    SetVehicleModKit(veh, 0)
+    -- O upgrade de motor nativo (1 a 5) não existe aqui: potência vem do chip, pistão e cabeçote
+    if Config.removerMotorNativo and GetVehicleMod(veh, 11) ~= -1 then
+        SetVehicleMod(veh, 11, -1, false)
     end
+    if Config.ativarTurboVisual and dados.turbo then ToggleVehicleMod(veh, 18, true) end
+
+    -- Freio (12) e transmissão (13): só o que foi instalado pelos kits
+    if Config.controlarFreioCambio then
+        for _, par in ipairs({ { 12, dados.freio }, { 13, dados.cambio } }) do
+            local mod, nivel = par[1], par[2]
+            local alvo = -1
+            if nivel then alvo = math.min(nivel, GetNumVehicleMods(veh, mod) - 1) end
+            if GetVehicleMod(veh, mod) ~= alvo then SetVehicleMod(veh, mod, alvo, false) end
+        end
+        -- Suspensão nativa (15) não existe: só a regulável (client/suspensao.lua)
+        if GetVehicleMod(veh, 15) ~= -1 then SetVehicleMod(veh, 15, -1, false) end
+    end
+    if AplicarSuspensao then AplicarSuspensao(veh, dados) end
 
     SetVehicleUndriveable(veh, dados.motor ~= nil)
 end
@@ -177,7 +191,7 @@ CreateThread(function()
         local veh = cache.vehicle
         if veh and cache.seat == -1 then
             local dados = Entity(veh).state[STATE_KEY]
-            if dados and dados.chip and GetIsVehicleEngineRunning(veh) and GetVehicleCurrentRpm(veh) >= Config.risco.rpmMinimo then
+            if dados and (dados.chip or dados.pistao or dados.cabecote) and GetIsVehicleEngineRunning(veh) and GetVehicleCurrentRpm(veh) >= Config.risco.rpmMinimo then
                 local risco = dados.remap and CalcularRemap(dados.remap, dados).risco or 0.0
                 if risco > 0.0 then
                     SetVehicleEngineHealth(veh, math.max(0.0, GetVehicleEngineHealth(veh) - (risco / 100.0) * Config.remap.danoMaximo))
@@ -186,13 +200,11 @@ CreateThread(function()
                         Avisar(('Mapa agressivo: risco ao motor %d%%'):format(math.floor(risco)), 'error', 5000)
                     end
                 end
-                for _, regra in ipairs(Config.risco.regras) do
-                    if dados.chip >= regra.chipMinimo and not dados[regra.semPeca] then
-                        SetVehicleEngineHealth(veh, math.max(0.0, GetVehicleEngineHealth(veh) - regra.dano))
-                        if GetGameTimer() - ultimoAviso > 30000 then
-                            ultimoAviso = GetGameTimer()
-                            Avisar(regra.aviso, 'error', 5000)
-                        end
+                for _, regra in ipairs(RiscosMontagem(dados)) do
+                    SetVehicleEngineHealth(veh, math.max(0.0, GetVehicleEngineHealth(veh) - regra.dano))
+                    if GetGameTimer() - ultimoAviso > 30000 then
+                        ultimoAviso = GetGameTimer()
+                        Avisar(regra.aviso, 'error', 5000)
                     end
                 end
             end
@@ -232,12 +244,36 @@ exports('usarPeca', function(data)
 end)
 
 ---------------------------------------------------------------------
+-- Transmissão: instala igual turbo (em qualquer lugar, com soquetes)
+---------------------------------------------------------------------
+exports('usarCambio', function(data)
+    local item = data.name
+    local kit = Config.kitsCambio[item]
+    if not kit then return end
+    if cache.vehicle then return Avisar('Saia do veículo para trocar a transmissão', 'error') end
+    local veh = VeiculoProximo()
+    if not veh then return Avisar('Nenhum veículo por perto', 'error') end
+
+    local netId = VehToNet(veh)
+    local pode, erro = lib.callback.await('pista_tuning:server:podeInstalarCambio', false, netId, item)
+    if not pode then return Avisar(erro or 'Não foi possível instalar', 'error') end
+
+    exports.ox_inventory:closeInventory()
+    if not Trabalhar(Config.cambio.tempo, ('Instalando %s...'):format(kit.label:lower()), { capo = veh }) then
+        return Avisar('Instalação cancelada', 'error')
+    end
+    local ok, msg = lib.callback.await('pista_tuning:server:instalarCambio', false, netId, item)
+    Avisar(msg, ok and 'success' or 'error', 6000)
+end)
+
+---------------------------------------------------------------------
 -- Menu "Ver preparação" (olho do ox_target no carro)
 ---------------------------------------------------------------------
 function TextoSlot(slot, valor)
     if valor == nil or valor == false then return 'Original' end
     if slot == 'chip' then return ('Stage %d'):format(valor) end
-    if slot == 'cabecote' then return valor == 2 and 'Competição' or 'Retrabalhado' end
+    if slot == 'cabecote' then return valor == 2 and 'De corrida' or 'Retrabalhado' end
+    if slot == 'pistao' then return valor == 'taxado' and 'Taxado' or 'Forjado' end
     return 'Instalado'
 end
 
@@ -293,6 +329,11 @@ abrirMenu = function(veh)
         }
     end
 
+    opcoes[#opcoes + 1] = {
+        title = ('Montagem: %s'):format(NomeMontagem(dados)),
+        icon = 'fa-solid fa-screwdriver-wrench', readOnly = true,
+    }
+
     for _, s in ipairs(Config.slots) do
         local valor = dados[s.id]
         local instalado = valor ~= nil and valor ~= false
@@ -311,6 +352,41 @@ abrirMenu = function(veh)
             onSelect = podeRemover and function() removerPeca(veh, s.id, s.label) end or nil,
             metadata = podeRemover and { 'Clique para remover' }
                 or (instalado and interna) and { 'Peça interna: tire e abra o motor' } or nil,
+        }
+    end
+
+    if Config.controlarFreioCambio then
+        local nomes = { [0] = 'Rua', [1] = 'Esportivo', [2] = 'Competição' }
+        local descFreio = dados.freio and nomes[dados.freio] or 'Original'
+        if dados.freioObra then
+            local feitas = 0
+            for _ in pairs(dados.freioObra.rodas or {}) do feitas = feitas + 1 end
+            descFreio = descFreio .. (' | kit sendo instalado: %d/4 rodas'):format(feitas)
+        end
+        opcoes[#opcoes + 1] = { title = 'Freio', description = descFreio, icon = 'fa-solid fa-circle-stop', readOnly = true }
+        opcoes[#opcoes + 1] = {
+            title = 'Transmissão',
+            description = dados.cambio and nomes[dados.cambio] or 'Original',
+            icon = 'fa-solid fa-gears',
+            readOnly = true,
+        }
+
+        local descSusp = 'Original'
+        if dados.suspensao then
+            local s = NormalizarSusp(dados.susp)
+            descSusp = ('Regulável | altura %+.1f cm | cambagem %.1f° / %.1f°'):format(s.altura, s.cambagemD, s.cambagemT)
+        elseif dados.suspObra then
+            local feitas = 0
+            for _ in pairs(dados.suspObra.rodas or {}) do feitas = feitas + 1 end
+            descSusp = ('Regulável sendo instalada: %d/4 rodas'):format(feitas)
+        end
+        opcoes[#opcoes + 1] = {
+            title = 'Suspensão',
+            description = descSusp,
+            icon = 'fa-solid fa-arrows-up-down',
+            readOnly = not dados.suspensao,
+            metadata = dados.suspensao and { 'Clique para regular' } or nil,
+            onSelect = dados.suspensao and function() AbrirSuspensao(veh) end or nil,
         }
     end
 
@@ -351,11 +427,31 @@ CreateThread(function()
                 abrirMenu(data.entity)
             end,
         },
+        {
+            name = 'pista_tuning_capo',
+            icon = 'fa-solid fa-car-side',
+            label = 'Abrir / fechar capô',
+            distance = 3.0,
+            canInteract = function(entity)
+                return not cache.vehicle and GetIsDoorValid(entity, 4)
+            end,
+            onSelect = function(data)
+                local veh = data.entity
+                local limite = GetGameTimer() + 1000
+                NetworkRequestControlOfEntity(veh)
+                while not NetworkHasControlOfEntity(veh) and GetGameTimer() < limite do Wait(10) end
+                if GetVehicleDoorAngleRatio(veh, 4) > 0.1 then
+                    SetVehicleDoorShut(veh, 4, false)
+                else
+                    SetVehicleDoorOpen(veh, 4, false, false)
+                end
+            end,
+        },
     })
 end)
 
 AddEventHandler('onResourceStop', function(res)
     if res == GetCurrentResourceName() then
-        exports.ox_target:removeGlobalVehicle('pista_tuning_ver')
+        exports.ox_target:removeGlobalVehicle({ 'pista_tuning_ver', 'pista_tuning_capo' })
     end
 end)

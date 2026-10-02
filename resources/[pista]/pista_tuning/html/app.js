@@ -42,8 +42,18 @@ function abrir(info) {
     document.getElementById('modelo').textContent = info.modelo || '';
     document.getElementById('stage').textContent = `STAGE ${info.stage}`;
 
+    const NOMES = {
+        pistao: { taxado: 'Pistão taxado', forjado: 'Pistão forjado' },
+        cabecote: { 1: 'Cabeçote retrabalhado', 2: 'Cabeçote de corrida' },
+        junta: { true: 'Junta reforçada' },
+        bielas: { true: 'Bielas forjadas' },
+    };
+    const PADRAO = { pistao: 'Pistão original', cabecote: 'Cabeçote original', junta: 'Junta original', bielas: 'Bielas originais', turbo: 'Turbo', intercooler: 'Intercooler' };
     document.querySelectorAll('.peca').forEach(el => {
-        el.classList.toggle('tem', !!info.pecas[el.dataset.peca]);
+        const valor = info.pecas[el.dataset.peca];
+        el.classList.toggle('tem', !!valor);
+        const nomes = NOMES[el.dataset.peca];
+        el.textContent = (valor && nomes && nomes[valor]) || PADRAO[el.dataset.peca] || el.textContent;
     });
 
     const maximos = {

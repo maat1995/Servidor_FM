@@ -261,3 +261,87 @@ button.sec { background: var(--painel-2); color: var(--texto); }
 button.sec:hover { filter: brightness(1.25); }
 button.pri { background: var(--destaque); border-color: var(--destaque-escuro); color: #111; }
 button.pri:hover { filter: brightness(1.1); }
+
+/* ------------------------------------------------------------------
+   Suspensão regulável
+   ------------------------------------------------------------------ */
+#suspensao {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, .35), rgba(0, 0, 0, .7));
+}
+
+#suspensao .tela { width: 1000px; }
+
+.presets .rot { color: var(--fraco); margin-right: 4px; }
+.preset {
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: var(--painel-2);
+    color: var(--texto);
+    font-size: 12px;
+}
+.preset:hover { border-color: var(--destaque); }
+.preset.ativo { background: var(--destaque); color: #111; border-color: var(--destaque-escuro); }
+
+.s-main { grid-template-columns: 1.15fr .85fr; padding: 16px 22px; gap: 16px; }
+
+.s-controles { display: flex; flex-direction: column; gap: 12px; }
+.eixos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.grupo {
+    padding: 10px 12px 4px;
+    background: var(--painel);
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+}
+.grupo h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--destaque);
+    margin-bottom: 6px;
+}
+
+.s-ajuste {
+    display: grid;
+    grid-template-columns: 1fr 70px;
+    grid-template-areas: "rot val" "trilho trilho";
+    align-items: baseline;
+    row-gap: 4px;
+    margin-bottom: 10px;
+}
+.s-ajuste label { grid-area: rot; font-size: 12px; font-weight: 600; }
+.s-ajuste output { grid-area: val; text-align: right; font-family: Consolas, monospace; font-size: 13px; color: var(--destaque); font-weight: 700; }
+.s-ajuste input { grid-area: trilho; }
+.s-ajuste output.mudou { color: var(--azul); }
+
+.s-visao { display: flex; flex-direction: column; gap: 12px; }
+#s-frente { height: 170px; }
+#s-lado { height: 120px; border-top: 1px solid var(--borda); margin-top: 4px; }
+
+.equilibrio { margin-bottom: 4px; }
+.eq-topo { display: flex; justify-content: space-between; font-size: 11px; color: var(--fraco); margin-bottom: 6px; }
+.eq-topo b { color: var(--texto); font-size: 12px; }
+.eq-trilho {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--azul), #2a3340 45%, #2a3340 55%, var(--perigo));
+}
+.eq-trilho i {
+    position: absolute;
+    top: -4px;
+    width: 4px;
+    height: 16px;
+    margin-left: -2px;
+    border-radius: 2px;
+    background: #fff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, .6);
+    transition: left .15s;
+}
+.obs { color: var(--fraco); font-size: 11px; line-height: 1.35; margin-top: 4px; }
+.legenda .tras::before { background: var(--azul); }

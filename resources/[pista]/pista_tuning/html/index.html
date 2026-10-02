@@ -26,8 +26,10 @@
                 <span class="stage" id="stage">STAGE -</span>
                 <span class="peca" data-peca="turbo">Turbo</span>
                 <span class="peca" data-peca="intercooler">Intercooler</span>
-                <span class="peca" data-peca="pistao">Pistão forjado</span>
+                <span class="peca" data-peca="pistao">Pistão</span>
                 <span class="peca" data-peca="cabecote">Cabeçote</span>
+                <span class="peca" data-peca="junta">Junta</span>
+                <span class="peca" data-peca="bielas">Bielas</span>
                 <span class="conexao"><i></i> ECU conectada</span>
             </div>
 
@@ -101,6 +103,85 @@
             </footer>
         </div>
     </div>
+    <div id="suspensao" class="oculto">
+        <div class="tela">
+            <header>
+                <div class="marca">
+                    <span class="logo">PA</span>
+                    <div>
+                        <h1>Suspensão regulável</h1>
+                        <small>Pista &amp; Asfalto Performance · coilover</small>
+                    </div>
+                </div>
+                <div class="carro">
+                    <div class="placa" id="s-placa">---</div>
+                    <div class="modelo" id="s-modelo">---</div>
+                </div>
+            </header>
+
+            <div class="status presets">
+                <span class="rot">Presets</span>
+                <button class="preset" data-preset="Rua">Rua</button>
+                <button class="preset" data-preset="Pista">Pista</button>
+                <button class="preset" data-preset="Drift">Drift</button>
+                <button class="preset" data-preset="Stance">Stance</button>
+                <span class="conexao"><i></i> Prévia ao vivo no carro</span>
+            </div>
+
+            <main class="s-main">
+                <section class="s-controles">
+                    <div class="grupo">
+                        <h2>Geral</h2>
+                        <div class="s-ajuste" data-campo="altura" data-faixa="altura"><label>Altura</label><input type="range"><output></output></div>
+                        <div class="s-ajuste" data-campo="compressao" data-faixa="compressao"><label>Amortecedor: compressão</label><input type="range"><output></output></div>
+                        <div class="s-ajuste" data-campo="retorno" data-faixa="retorno"><label>Amortecedor: retorno</label><input type="range"><output></output></div>
+                    </div>
+                    <div class="eixos">
+                        <div class="grupo">
+                            <h2>Dianteira</h2>
+                            <div class="s-ajuste" data-campo="molaD" data-faixa="mola"><label>Carga da mola</label><input type="range"><output></output></div>
+                            <div class="s-ajuste" data-campo="barraD" data-faixa="barra"><label>Barra estabilizadora</label><input type="range"><output></output></div>
+                            <div class="s-ajuste" data-campo="cambagemD" data-faixa="cambagem"><label>Cambagem</label><input type="range"><output></output></div>
+                            <div class="s-ajuste" data-campo="bitolaD" data-faixa="bitola"><label>Bitola (por lado)</label><input type="range"><output></output></div>
+                        </div>
+                        <div class="grupo">
+                            <h2>Traseira</h2>
+                            <div class="s-ajuste" data-campo="molaT" data-faixa="mola"><label>Carga da mola</label><input type="range"><output></output></div>
+                            <div class="s-ajuste" data-campo="barraT" data-faixa="barra"><label>Barra estabilizadora</label><input type="range"><output></output></div>
+                            <div class="s-ajuste" data-campo="cambagemT" data-faixa="cambagem"><label>Cambagem</label><input type="range"><output></output></div>
+                            <div class="s-ajuste" data-campo="bitolaT" data-faixa="bitola"><label>Bitola (por lado)</label><input type="range"><output></output></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="s-visao">
+                    <div class="grafico">
+                        <div class="legenda"><span class="original">Original</span><span class="novo">Regulagem</span><span class="tras">Eixo traseiro</span></div>
+                        <canvas id="s-frente" width="380" height="170"></canvas>
+                        <canvas id="s-lado" width="380" height="120"></canvas>
+                    </div>
+                    <div class="barras" id="s-resumo">
+                        <div class="equilibrio">
+                            <div class="eq-topo"><span>Sai de frente</span><b id="s-eq-texto">Neutro</b><span>Sai de traseira</span></div>
+                            <div class="eq-trilho"><i id="s-eq-marca"></i></div>
+                        </div>
+                        <div class="barra" id="s-b-firmeza"><span>Firmeza</span><div><i></i></div><b>0%</b></div>
+                        <div class="barra" id="s-b-conforto"><span>Conforto</span><div><i></i></div><b>0%</b></div>
+                        <small class="obs">Cambagem e bitola são visuais (todo mundo vê). Mola, amortecedor e barra mudam o comportamento.</small>
+                    </div>
+                </section>
+            </main>
+
+            <footer>
+                <button id="s-btn-padrao" class="sec">Regulagem de fábrica</button>
+                <div class="espaco"></div>
+                <button id="s-btn-fechar" class="sec">Cancelar</button>
+                <button id="s-btn-salvar" class="pri">Aplicar regulagem</button>
+            </footer>
+        </div>
+    </div>
+
     <script src="app.js"></script>
+    <script src="suspensao.js"></script>
 </body>
 </html>

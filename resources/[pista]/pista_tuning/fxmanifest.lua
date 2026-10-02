@@ -5,12 +5,14 @@ lua54 'yes'
 name 'pista_tuning'
 author 'Pista & Asfalto RP'
 description 'Sistema de preparação: peças como item, remap no notebook, instalado por mecânico especializado ou quem tem skill'
-version '0.3.0'
+version '0.6.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
     'config.lua',
+    'shared/montagem.lua',
     'shared/remap.lua',
+    'shared/suspensao.lua',
 }
 
 client_scripts {
@@ -20,6 +22,8 @@ client_scripts {
     'client/nitro.lua',
     'client/remap.lua',
     'client/motor.lua',
+    'client/elevador.lua',
+    'client/suspensao.lua',
 }
 
 server_scripts {
@@ -33,6 +37,7 @@ files {
     'html/index.html',
     'html/style.css',
     'html/app.js',
+    'html/suspensao.js',
 }
 
 dependencies {

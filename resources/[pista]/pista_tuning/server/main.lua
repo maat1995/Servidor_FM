@@ -27,6 +27,7 @@ local function obterDados(plate)
     if cache[plate] then return cache[plate] end
     local raw = MySQL.scalar.await('SELECT dados FROM pista_tuning WHERE plate = ?', { plate })
     cache[plate] = raw and json.decode(raw) or {}
+    if cache[plate].pistao == true then cache[plate].pistao = 'forjado' end -- versão antiga
     return cache[plate]
 end
 
@@ -499,24 +500,23 @@ lib.callback.register('pista_tuning:server:retirarMotor', function(source, netId
     if dados.motor then return false, 'Esse carro já está sem motor' end
     if GetPedInVehicleSeat(veh, -1) ~= 0 then return false, 'Tem alguém no volante' end
 
-    local guincho = guinchoParadoPerto(frenteDo(veh, 2.2), Config.motor.distanciaGuincho, false)
-    if not guincho then return false, 'Traga o guincho (vazio) para a frente do carro' end
-
-    local gc = GetEntityCoords(guincho)
-    local m = { x = gc.x, y = gc.y, z = gc.z + 1.0, h = GetEntityHeading(guincho), aberto = false, ['local'] = 'guincho' }
+    -- O motor sai do cofre direto para os braços do mecânico
+    local fc = frenteDo(veh, 1.6)
+    local m = { x = fc.x, y = fc.y, z = fc.z + 0.5, h = GetEntityHeading(veh), aberto = false, ['local'] = 'mao' }
     local motor = criarMotor(plate, m)
     if not motor then return false, 'Não foi possível tirar o motor' end
+    local st = estadoMotor(motor)
+    st.carregadoPor = source
+    Entity(motor).state:set(STATE_MOTOR, st, true)
+    FreezeEntityPosition(motor, false)
 
-    local stG = estadoGuincho(guincho)
-    stG.motor = plate
-    Entity(guincho).state:set(STATE_GUINCHO, stG, true)
-
-    m.z = gc.z
+    m.z = fc.z
+    m['local'] = 'chao' -- se o servidor cair com ele na mão, fica no chão
     dados.motor = m
     aplicarDados(veh, dados)
     gastarFerramenta(source, 'soquetes', 'motor')
     darXP(source, Config.motor.xpRetirar)
-    return true, 'Motor no guincho. Leve até a bancada.', NetworkGetNetworkIdFromEntity(motor), NetworkGetNetworkIdFromEntity(guincho)
+    return true, 'Motor retirado. Leve até a bancada.', NetworkGetNetworkIdFromEntity(motor)
 end)
 
 lib.callback.register('pista_tuning:server:recolocarMotor', function(source, netId)
@@ -530,14 +530,11 @@ lib.callback.register('pista_tuning:server:recolocarMotor', function(source, net
     local dados = dadosDoVeiculo(veh)
     if not dados.motor then return false, 'Esse carro está com motor' end
 
-    local guincho = guinchoParadoPerto(frenteDo(veh, 2.2), Config.motor.distanciaGuincho, plate)
-    if not guincho then return false, 'Traga o guincho com o motor deste carro para a frente dele' end
-
     local motor = motorDaPlaca(plate)
-    if motor then DeleteEntity(motor) end
-    local stG = estadoGuincho(guincho)
-    stG.motor = nil
-    Entity(guincho).state:set(STATE_GUINCHO, stG, true)
+    local st = motor and estadoMotor(motor)
+    if not st or st.carregadoPor ~= source then return false, 'Traga o motor deste carro nos braços' end
+    if #(GetEntityCoords(motor) - GetEntityCoords(veh)) > 6.0 then return false, 'Chegue mais perto do carro' end
+    DeleteEntity(motor)
 
     dados.motor = nil
     aplicarDados(veh, dados)
@@ -554,7 +551,8 @@ local function bancadaLivrePerto(coords, coords2)
         if perto then
             local ocupada = false
             for _, obj in ipairs(objetosComState(STATE_MOTOR)) do
-                if estadoMotor(obj)['local'] ~= 'guincho' and #(GetEntityCoords(obj) - bc) < 1.2 then ocupada = true end
+                local onde = estadoMotor(obj)['local']
+                if onde ~= 'guincho' and onde ~= 'mao' and #(GetEntityCoords(obj) - bc) < 1.2 then ocupada = true end
             end
             if not ocupada then return i, b end
         end
@@ -713,7 +711,9 @@ MySQL.ready(function()
         limparObjetos()
 
         -- guinchos nos lugares deles
-        for i = 1, #Config.guinchos do criarGuincho(i) end
+        if Config.motor.usarGuincho then
+            for i = 1, #Config.guinchos do criarGuincho(i) end
+        end
 
         -- motores que estavam fora do carro continuam fora
         local linhas = MySQL.query.await('SELECT plate, dados FROM pista_tuning WHERE dados LIKE ?', { '%"motor":{%' }) or {}
@@ -722,7 +722,7 @@ MySQL.ready(function()
             if dados and dados.motor then
                 cache[linha.plate] = dados
                 -- estava pendurado: fica no chão onde o guincho parou
-                if dados.motor['local'] == 'guincho' then dados.motor['local'] = 'chao' end
+                if dados.motor['local'] == 'guincho' or dados.motor['local'] == 'mao' then dados.motor['local'] = 'chao' end
                 criarMotor(linha.plate, dados.motor)
             end
         end
@@ -879,4 +879,473 @@ lib.addCommand('ajusteempurrar', {
     restricted = 'group.admin',
 }, function(source, args)
     TriggerClientEvent('pista_tuning:client:ajuste', source, 'empurrar', args.x, args.y, args.z, args.rz or 180.0)
+end)
+
+lib.addCommand('ajustecorda', {
+    help = 'Ajusta de onde sai a corda no guincho',
+    params = { { name = 'x', type = 'number' }, { name = 'y', type = 'number' }, { name = 'z', type = 'number' } },
+    restricted = 'group.admin',
+}, function(source, args)
+    TriggerClientEvent('pista_tuning:client:ajuste', source, 'corda', args.x, args.y, args.z, 0.0)
+end)
+
+---------------------------------------------------------------------
+-- Elevador: rodas, freio e suspensão
+---------------------------------------------------------------------
+local STATE_ELEV = 'pista_elevador'
+local STATE_RODAS = 'pista_rodas'
+
+local function exigirMecanicoElevador(source)
+    local player = exports.qbx_core:GetPlayer(source)
+    local job = player and player.PlayerData.job
+    local cfg = Config.elevador
+    if not job or job.name ~= cfg.job then return 'Só mecânico pode usar o elevador' end
+    if cfg.precisaEstarEmServico and not job.onduty then return 'Entre em serviço primeiro' end
+end
+
+local function carroComGente(veh)
+    for assento = -1, 6 do
+        if GetPedInVehicleSeat(veh, assento) ~= 0 then return true end
+    end
+    return false
+end
+
+local function elevadorOcupado(i)
+    for _, veh in ipairs(GetAllVehicles()) do
+        local st = Entity(veh).state[STATE_ELEV]
+        if st and st.i == i then return true end
+    end
+    return false
+end
+
+local function validarNoAlto(source, netId)
+    local veh, err = pegarVeiculo(source, netId, false)
+    if not veh then return nil, err end
+    err = exigirMecanicoElevador(source)
+    if err then return nil, err end
+    local st = Entity(veh).state[STATE_ELEV]
+    if not st or not st.alto or st.descendo then return nil, 'O carro precisa estar no alto do elevador' end
+    return veh, nil, st
+end
+
+local function nivelNome(nivel)
+    return ({ [0] = 'de rua', [1] = 'esportivo', [2] = 'de competição' })[nivel] or tostring(nivel)
+end
+
+local function itemDoKit(kits, nivel)
+    for nome, k in pairs(kits) do
+        if k.nivel == nivel then return nome end
+    end
+end
+
+lib.callback.register('pista_tuning:server:subirElevador', function(source, netId)
+    local veh, err = pegarVeiculo(source, netId, false)
+    if not veh then return false, err end
+    err = exigirMecanicoElevador(source)
+    if err then return false, err end
+    if Entity(veh).state[STATE_ELEV] then return false, 'O carro já está no elevador' end
+    if carroComGente(veh) then return false, 'Tire todo mundo de dentro do carro' end
+
+    local c = GetEntityCoords(veh)
+    local escolhido
+    for i, e in ipairs(Config.elevadores) do
+        if #(vec2(c.x, c.y) - vec2(e.coords.x, e.coords.y)) <= e.raio then escolhido = i break end
+    end
+    if not escolhido then return false, 'Posicione o carro entre as colunas do elevador' end
+    if elevadorOcupado(escolhido) then return false, 'Esse elevador já está ocupado' end
+
+    Entity(veh).state:set(STATE_ELEV, { i = escolhido, z0 = c.z, alto = true }, true)
+    Entity(veh).state:set(STATE_RODAS, {}, true)
+    return true, { z0 = c.z }
+end)
+
+lib.callback.register('pista_tuning:server:descerElevador', function(source, netId)
+    local veh, err, st = validarNoAlto(source, netId)
+    if not veh then return false, err end
+    if next(Entity(veh).state[STATE_RODAS] or {}) then return false, 'Coloque todas as rodas antes de descer' end
+    st.descendo = true
+    Entity(veh).state:set(STATE_ELEV, st, true)
+    return true, { z0 = st.z0 }
+end)
+
+lib.callback.register('pista_tuning:server:elevadorLiberado', function(source, netId)
+    local veh = NetworkGetEntityFromNetworkId(netId or 0)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return false end
+    local st = Entity(veh).state[STATE_ELEV]
+    if st and st.descendo then
+        Entity(veh).state:set(STATE_ELEV, nil, true)
+        Entity(veh).state:set(STATE_RODAS, nil, true)
+    end
+    return true
+end)
+
+local function rodaValida(roda)
+    roda = tonumber(roda)
+    return roda and roda >= 0 and roda <= 3 and math.floor(roda) == roda and roda or nil
+end
+
+lib.callback.register('pista_tuning:server:retirarRoda', function(source, netId, roda)
+    local veh, err = validarNoAlto(source, netId)
+    if not veh then return false, err end
+    roda = rodaValida(roda)
+    if not roda then return false, 'Roda inválida' end
+    local rodas = Entity(veh).state[STATE_RODAS] or {}
+    if rodas['r' .. roda] then return false, 'Essa roda já está fora' end
+    rodas['r' .. roda] = true
+    Entity(veh).state:set(STATE_RODAS, rodas, true)
+    return true, 'Roda fora'
+end)
+
+lib.callback.register('pista_tuning:server:registrarRoda', function(source, netId, roda, propNet)
+    local veh = NetworkGetEntityFromNetworkId(netId or 0)
+    roda = rodaValida(roda)
+    if not veh or veh == 0 or not DoesEntityExist(veh) or not roda then return false end
+    local rodas = Entity(veh).state[STATE_RODAS] or {}
+    if rodas['r' .. roda] then
+        rodas['r' .. roda] = tonumber(propNet) or true
+        Entity(veh).state:set(STATE_RODAS, rodas, true)
+    end
+    return true
+end)
+
+lib.callback.register('pista_tuning:server:recolocarRoda', function(source, netId, roda)
+    local veh, err = validarNoAlto(source, netId)
+    if not veh then return false, err end
+    roda = rodaValida(roda)
+    if not roda then return false, 'Roda inválida' end
+    local rodas = Entity(veh).state[STATE_RODAS] or {}
+    local prop = rodas['r' .. roda]
+    if not prop then return false, 'Essa roda já está no carro' end
+
+    if type(prop) == 'number' then
+        local obj = NetworkGetEntityFromNetworkId(prop)
+        if obj and obj ~= 0 and DoesEntityExist(obj) then DeleteEntity(obj) end
+    end
+    rodas['r' .. roda] = nil
+    Entity(veh).state:set(STATE_RODAS, rodas, true)
+    return true, 'Roda recolocada'
+end)
+
+--- Kits que vão roda por roda (freio e suspensão): 1 kit = 4 rodas
+local function kitDaRoda(tipo, itemName)
+    if tipo == 'freio' then
+        local k = Config.kitsFreio[itemName]
+        return k and { label = k.label, nivel = k.nivel, obra = 'freioObra' } or nil
+    elseif tipo == 'susp' and itemName == Config.suspensao.item then
+        return { label = Config.suspensao.label, obra = 'suspObra' }
+    end
+end
+
+lib.callback.register('pista_tuning:server:instalarNaRoda', function(source, netId, roda, tipo, itemName)
+    local kit = kitDaRoda(tipo, itemName)
+    if not kit then return false, 'Esse item não vai na roda' end
+    local veh, err = validarNoAlto(source, netId)
+    if not veh then return false, err end
+    roda = rodaValida(roda)
+    if not roda then return false, 'Roda inválida' end
+    if not (Entity(veh).state[STATE_RODAS] or {})['r' .. roda] then return false, 'Tire a roda primeiro' end
+
+    local dados = dadosDoVeiculo(veh)
+    local obra = dados[kit.obra]
+    if obra and obra.item ~= itemName then
+        local outro = kitDaRoda(tipo, obra.item)
+        return false, ('Termine primeiro o %s que já foi começado'):format(outro and outro.label or 'kit')
+    end
+    if not obra then
+        if tipo == 'freio' and dados.freio == kit.nivel then
+            return false, ('Esse carro já tem freio %s'):format(nivelNome(kit.nivel))
+        end
+        if tipo == 'susp' and dados.suspensao then
+            return false, 'Esse carro já tem suspensão regulável: é só regular'
+        end
+        if not exports.ox_inventory:RemoveItem(source, itemName, 1) then
+            return false, ('Você não tem %s'):format(kit.label)
+        end
+        obra = { item = itemName, rodas = {} }
+    end
+    if obra.rodas['r' .. roda] then return false, ('Essa roda já está com %s'):format(kit.label:lower()) end
+    obra.rodas['r' .. roda] = true
+
+    local feitas = 0
+    for _ in pairs(obra.rodas) do feitas = feitas + 1 end
+
+    local msg
+    if feitas >= 4 then
+        dados[kit.obra] = nil
+        if tipo == 'freio' then
+            local antigo = dados.freio
+            dados.freio = kit.nivel
+            if antigo ~= nil then
+                local itemAntigo = itemDoKit(Config.kitsFreio, antigo)
+                if itemAntigo then exports.ox_inventory:AddItem(source, itemAntigo, 1) end
+            end
+        else
+            dados.suspensao = true
+            dados.susp = NormalizarSusp(dados.susp or Config.suspensao.padrao)
+            darXP(source, Config.suspensao.xp)
+        end
+        msg = tipo == 'susp' and 'Suspensão regulável instalada nas 4 rodas! Use /suspensao para regular.'
+            or ('%s instalado nas 4 rodas!'):format(kit.label)
+    else
+        dados[kit.obra] = obra
+        msg = ('%s instalado nesta roda (%d/4)'):format(kit.label, feitas)
+    end
+    aplicarDados(veh, dados)
+    return true, msg
+end)
+
+---------------------------------------------------------------------
+-- Transmissão: instala igual turbo (em qualquer lugar, com soquetes)
+---------------------------------------------------------------------
+local function ehMecanico(source, precisaServico)
+    local player = exports.qbx_core:GetPlayer(source)
+    local job = player and player.PlayerData.job
+    if not job or job.name ~= Config.elevador.job then return false end
+    return job.onduty or not precisaServico
+end
+
+local function validarCambio(source, netId, itemName)
+    local kit = Config.kitsCambio[itemName]
+    if not kit then return nil, 'Esse item não é uma transmissão' end
+    local veh, err = pegarVeiculo(source, netId, false)
+    if not veh then return nil, err end
+    if Config.pecasExternasSoNaOficina and not naOficina(GetEntityCoords(veh)) then
+        return nil, 'Isso só pode ser feito dentro da oficina'
+    end
+    if not ehMecanico(source, true) then
+        err = exigirNivel(source, Config.cambio.nivel)
+        if err then return nil, err end
+    end
+    if exports.ox_inventory:Search(source, 'count', itemName) < 1 then
+        return nil, ('Você não tem %s'):format(kit.label)
+    end
+    err = exigirFerramenta(source, 'soquetes')
+    if err then return nil, err end
+    local dados = dadosDoVeiculo(veh)
+    if dados.motor then return nil, 'Esse carro está sem motor' end
+    if dados.cambio == kit.nivel then return nil, ('Esse carro já tem transmissão %s'):format(nivelNome(kit.nivel)) end
+    return veh, nil, kit, dados
+end
+
+lib.callback.register('pista_tuning:server:podeInstalarCambio', function(source, netId, itemName)
+    local veh, err = validarCambio(source, netId, itemName)
+    return veh ~= nil, err
+end)
+
+lib.callback.register('pista_tuning:server:instalarCambio', function(source, netId, itemName)
+    local veh, err, kit, dados = validarCambio(source, netId, itemName)
+    if not veh then return false, err end
+    if not exports.ox_inventory:RemoveItem(source, itemName, 1) then
+        return false, ('Você não tem %s'):format(kit.label)
+    end
+    local antigo = dados.cambio
+    if antigo ~= nil then
+        local itemAntigo = itemDoKit(Config.kitsCambio, antigo)
+        if itemAntigo then exports.ox_inventory:AddItem(source, itemAntigo, 1) end
+    end
+    dados.cambio = kit.nivel
+    aplicarDados(veh, dados)
+    gastarFerramenta(source, 'soquetes', 'peca')
+    darXP(source, Config.cambio.xp)
+    return true, ('%s instalada'):format(kit.label)
+end)
+
+---------------------------------------------------------------------
+-- Suspensão regulável: o dono do carro ou um mecânico regula (sem chave)
+---------------------------------------------------------------------
+local function ehDono(source, plate)
+    local player = exports.qbx_core:GetPlayer(source)
+    if not player then return false end
+    return MySQL.scalar.await('SELECT 1 FROM player_vehicles WHERE plate = ? AND citizenid = ?',
+        { plate, player.PlayerData.citizenid }) ~= nil
+end
+
+local function validarSusp(source, netId)
+    local veh, err = pegarVeiculo(source, netId, true)
+    if not veh then return nil, err end
+    local dados = dadosDoVeiculo(veh)
+    if not dados.suspensao then return nil, 'Esse carro não tem suspensão regulável' end
+    if not ehMecanico(source, Config.suspensao.mecanicoPrecisaServico) and not ehDono(source, placaDo(veh)) then
+        return nil, 'Só o dono do carro ou um mecânico pode regular a suspensão'
+    end
+    return veh, nil, dados
+end
+
+lib.callback.register('pista_tuning:server:abrirSusp', function(source, netId)
+    local veh, err, dados = validarSusp(source, netId)
+    if not veh then return false, err end
+    return true, { susp = NormalizarSusp(dados.susp), placa = placaDo(veh) }
+end)
+
+lib.callback.register('pista_tuning:server:salvarSusp', function(source, netId, valores)
+    local veh, err, dados = validarSusp(source, netId)
+    if not veh then return false, err end
+    dados.susp = NormalizarSusp(valores)
+    aplicarDados(veh, dados)
+    return true, 'Suspensão regulada'
+end)
+
+-- /servico: entra e sai de serviço (mecânico)
+lib.addCommand('servico', {
+    help = 'Entrar ou sair de serviço',
+}, function(source)
+    local player = exports.qbx_core:GetPlayer(source)
+    if not player then return end
+    local job = player.PlayerData.job
+    if not job or job.name == 'unemployed' then
+        return exports.qbx_core:Notify(source, 'Você não tem emprego', 'error')
+    end
+    local novo = not job.onduty
+    player.Functions.SetJobDuty(novo)
+    TriggerClientEvent('QBCore:Client:SetDuty', source, novo)
+    exports.qbx_core:Notify(source, novo and 'Você entrou em serviço' or 'Você saiu de serviço', novo and 'success' or 'inform')
+end)
+
+---------------------------------------------------------------------
+-- Carregar o motor nos braços (vaga -> bancada)
+---------------------------------------------------------------------
+local function motorNaMaoDe(source, netId)
+    local motor = NetworkGetEntityFromNetworkId(netId or 0)
+    if not motor or motor == 0 or not DoesEntityExist(motor) then return nil end
+    local st = estadoMotor(motor)
+    if not st or st.carregadoPor ~= source then return nil end
+    return motor, st
+end
+
+lib.callback.register('pista_tuning:server:pegarMotor', function(source, netId)
+    local motor, err = pegarObjeto(source, netId, STATE_MOTOR, 4.0)
+    if not motor then return false, err end
+    err = exigirMecanico(source)
+    if err then return false, err end
+    local st = estadoMotor(motor)
+    if st.carregadoPor and st.carregadoPor ~= source and GetPlayerPing(st.carregadoPor) > 0 then
+        return false, 'Alguém já está carregando esse motor'
+    end
+    if st.aberto then return false, 'Feche o motor antes' end
+
+    if st['local'] == 'guincho' then
+        for _, g in ipairs(objetosComState(STATE_GUINCHO)) do
+            local sg = estadoGuincho(g)
+            if sg.motor == st.plate then
+                sg.motor = nil
+                Entity(g).state:set(STATE_GUINCHO, sg, true)
+            end
+        end
+    end
+    st['local'] = 'mao'
+    st.carregadoPor = source
+    Entity(motor).state:set(STATE_MOTOR, st, true)
+    FreezeEntityPosition(motor, false)
+    return true
+end)
+
+-- Pede o lugar da bancada para colocar o motor que está na mão
+lib.callback.register('pista_tuning:server:lugarNaBancada', function(source, netId)
+    local motor = motorNaMaoDe(source, netId)
+    if not motor then return false, 'Você não está carregando esse motor' end
+    local i, b = bancadaLivrePerto(GetEntityCoords(GetPlayerPed(source)))
+    if not i then return false, 'Chegue perto de uma bancada livre' end
+    return true, { x = b.x, y = b.y, z = b.z, h = b.w }
+end)
+
+-- O cliente já colocou o motor (na bancada ou no chão): grava
+lib.callback.register('pista_tuning:server:motorPosicionado', function(source, netId, onde)
+    local motor, st = motorNaMaoDe(source, netId)
+    if not motor then return false end
+    onde = onde == 'bancada' and 'bancada' or 'chao'
+    FreezeEntityPosition(motor, true)
+    st['local'] = onde
+    st.carregadoPor = nil
+    Entity(motor).state:set(STATE_MOTOR, st, true)
+    local c = GetEntityCoords(motor)
+    salvarMotor(st.plate, { x = c.x, y = c.y, z = c.z, h = GetEntityHeading(motor), ['local'] = onde })
+    return true, onde == 'bancada' and 'Motor na bancada. Abra com o torquímetro.' or 'Motor no chão'
+end)
+
+-- Motor da mão para o gancho do guincho
+lib.callback.register('pista_tuning:server:motorNoGancho', function(source, netId)
+    local motor, st = motorNaMaoDe(source, netId)
+    if not motor then return false, 'Você não está carregando esse motor' end
+    local guincho = guinchoParadoPerto(GetEntityCoords(GetPlayerPed(source)), 4.0, false)
+    if not guincho then return false, 'Chegue perto do guincho vazio' end
+
+    st['local'] = 'guincho'
+    st.carregadoPor = nil
+    Entity(motor).state:set(STATE_MOTOR, st, true)
+    local sg = estadoGuincho(guincho)
+    sg.motor = st.plate
+    Entity(guincho).state:set(STATE_GUINCHO, sg, true)
+    local gc = GetEntityCoords(guincho)
+    salvarMotor(st.plate, { x = gc.x, y = gc.y, z = gc.z, h = GetEntityHeading(guincho), ['local'] = 'guincho' })
+    return true, 'Motor no gancho', NetworkGetNetworkIdFromEntity(guincho)
+end)
+
+-- Saiu do jogo carregando o motor: ele fica no chão
+AddEventHandler('playerDropped', function()
+    local src = source
+    for _, obj in ipairs(objetosComState(STATE_MOTOR)) do
+        local st = estadoMotor(obj)
+        if st.carregadoPor == src then
+            st['local'] = 'chao'
+            st.carregadoPor = nil
+            Entity(obj).state:set(STATE_MOTOR, st, true)
+            local c = GetEntityCoords(obj)
+            salvarMotor(st.plate, { x = c.x, y = c.y, z = c.z - 0.5, ['local'] = 'chao' })
+        end
+    end
+end)
+
+lib.addCommand('ajustecarregar', {
+    help = 'Ajusta o motor nos braços',
+    params = {
+        { name = 'x', type = 'number' }, { name = 'y', type = 'number' }, { name = 'z', type = 'number' },
+        { name = 'rz', type = 'number', optional = true },
+    },
+    restricted = 'group.admin',
+}, function(source, args)
+    TriggerClientEvent('pista_tuning:client:ajuste', source, 'carregar', args.x, args.y, args.z, args.rz or 90.0)
+end)
+
+-- /girarguincho [graus]: gira o guincho mais perto (para acertar a direção ao vivo)
+lib.addCommand('girarguincho', {
+    help = 'Gira o guincho mais perto',
+    params = { { name = 'graus', type = 'number', help = 'Direção (0 a 360)' } },
+    restricted = 'group.admin',
+}, function(source, args)
+    local eu = GetEntityCoords(GetPlayerPed(source))
+    local perto, dist
+    for _, g in ipairs(objetosComState(STATE_GUINCHO)) do
+        local d = #(GetEntityCoords(g) - eu)
+        if not dist or d < dist then perto, dist = g, d end
+    end
+    if not perto or dist > 10.0 then
+        return exports.qbx_core:Notify(source, 'Nenhum guincho por perto', 'error')
+    end
+    SetEntityHeading(perto, args.graus + 0.0)
+    local c = GetEntityCoords(perto)
+    local linha = ('guincho = vec4(%.2f, %.2f, %.2f, %.1f)'):format(c.x, c.y, c.z, args.graus)
+    print('[pista_tuning] ' .. linha)
+    exports.qbx_core:Notify(source, linha, 'inform', 10000)
+end)
+
+-- /moverguincho: leva o guincho mais perto para onde você está (mantém a direção)
+lib.addCommand('moverguincho', {
+    help = 'Move o guincho mais perto para a sua posição',
+    restricted = 'group.admin',
+}, function(source)
+    local eu = GetEntityCoords(GetPlayerPed(source))
+    local perto, dist
+    for _, g in ipairs(objetosComState(STATE_GUINCHO)) do
+        local d = #(GetEntityCoords(g) - eu)
+        if not dist or d < dist then perto, dist = g, d end
+    end
+    if not perto or dist > 10.0 then
+        return exports.qbx_core:Notify(source, 'Nenhum guincho por perto', 'error')
+    end
+    local z = GetEntityCoords(perto).z
+    SetEntityCoords(perto, eu.x, eu.y, z, false, false, false, false)
+    local h = GetEntityHeading(perto)
+    local linha = ('guincho = vec4(%.2f, %.2f, %.2f, %.1f)'):format(eu.x, eu.y, z, h)
+    print('[pista_tuning] ' .. linha)
+    exports.qbx_core:Notify(source, linha, 'inform', 10000)
 end)

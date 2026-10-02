@@ -647,7 +647,7 @@ return {
     },
     ['peca_pistao_forjado'] = {
         label = 'Pistão forjado', weight = 3000, stack = true, close = true,
-        description = 'Vai no motor aberto. Aguenta o Stage 3. Requer nível 2.',
+        description = 'Para TURBO: aguenta pressão alta e libera +0.4 bar no remap. Vai no motor aberto na bancada.',
         client = { export = 'pista_tuning.usarPeca' },
     },
     ['chip_stage1'] = {
@@ -680,15 +680,65 @@ return {
         description = 'Conecta na ECU do carro no elevador para ajustar o mapa do chip.',
         client = { export = 'pista_tuning.usarNotebook' },
     },
+    ['peca_pistao_taxado'] = {
+        label = 'Pistão taxado', weight = 3000, stack = true, close = true,
+        description = 'Alta taxa de compressão, para ASPIRADO. Com turbo dá batida de pino. Vai no motor aberto.',
+        client = { export = 'pista_tuning.usarPeca' },
+    },
+    ['junta_reforcada'] = {
+        label = 'Junta de cabeçote reforçada', weight = 500, stack = true, close = true,
+        description = 'Junta metálica (MLS). Obrigatória para turbo acima de 1.4 bar. Vai no motor aberto.',
+        client = { export = 'pista_tuning.usarPeca' },
+    },
+    ['bielas_forjadas'] = {
+        label = 'Bielas forjadas', weight = 4000, stack = true, close = true,
+        description = 'Liberam o limitador acima de 8.500 rpm e reduzem o risco em giro alto. Vai no motor aberto.',
+        client = { export = 'pista_tuning.usarPeca' },
+    },
     ['cabecote_retrabalhado'] = {
         label = 'Cabeçote retrabalhado', weight = 9000, stack = true, close = true,
-        description = 'Vai no motor aberto. +resposta e libera +200 rpm no remap. Nível 2.',
+        description = 'Dutos polidos e válvulas maiores. Melhora qualquer motor e libera +200 rpm no remap.',
         client = { export = 'pista_tuning.usarPeca' },
     },
     ['cabecote_competicao'] = {
-        label = 'Cabeçote de competição', weight = 9000, stack = true, close = true,
-        description = 'Vai no motor aberto. Ganho alto e libera +500 rpm no remap. Nível 3.',
+        label = 'Cabeçote de corrida', weight = 9000, stack = true, close = true,
+        description = 'Rende muito só com pistão taxado ou forjado. Libera +500 rpm no remap.',
         client = { export = 'pista_tuning.usarPeca' },
+    },
+    ['freio_rua'] = {
+        label = 'Kit de freio de rua', weight = 6000, stack = true, close = true,
+        description = 'Pastilhas e discos de rua. Instale nas 4 rodas no elevador.',
+        client = { export = 'pista_tuning.usarFreio' },
+    },
+    ['freio_esportivo'] = {
+        label = 'Kit de freio esportivo', weight = 7000, stack = true, close = true,
+        description = 'Discos ventilados e pinças esportivas. Instale nas 4 rodas no elevador.',
+        client = { export = 'pista_tuning.usarFreio' },
+    },
+    ['freio_competicao'] = {
+        label = 'Kit de freio de competição', weight = 8000, stack = true, close = true,
+        description = 'Freio de pista. Instale nas 4 rodas no elevador.',
+        client = { export = 'pista_tuning.usarFreio' },
+    },
+    ['cambio_rua'] = {
+        label = 'Transmissão de rua', weight = 15000, stack = true, close = true,
+        description = 'Instale com o jogo de soquetes, em qualquer lugar (capô aberto).',
+        client = { export = 'pista_tuning.usarCambio' },
+    },
+    ['cambio_esportivo'] = {
+        label = 'Transmissão esportiva', weight = 15000, stack = true, close = true,
+        description = 'Engates mais rápidos. Instale com o jogo de soquetes, em qualquer lugar.',
+        client = { export = 'pista_tuning.usarCambio' },
+    },
+    ['cambio_competicao'] = {
+        label = 'Transmissão de competição', weight = 15000, stack = true, close = true,
+        description = 'Câmbio de pista. Instale com o jogo de soquetes, em qualquer lugar.',
+        client = { export = 'pista_tuning.usarCambio' },
+    },
+    ['suspensao_regulavel'] = {
+        label = 'Suspensão regulável', weight = 12000, stack = true, close = true,
+        description = 'Kit coilover (rosca). Instale nas 4 rodas no elevador; depois regule com /suspensao.',
+        client = { export = 'pista_tuning.usarSuspensao' },
     },
     ['jogo_soquetes'] = {
         label = 'Jogo de soquetes', weight = 3000, stack = false,

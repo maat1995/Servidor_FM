@@ -72,92 +72,351 @@ local function pendurarNoGancho(motor, guincho)
 end
 
 ---------------------------------------------------------------------
--- Esconde o guincho que já vem no MLO (o nosso nasce no lugar dele)
+-- Animação: motor subindo/descendo no gancho
+---------------------------------------------------------------------
+local function suavizar(t) return t * t * (3.0 - 2.0 * t) end
+
+local function offsetNoGuincho(guincho, mundo)
+    return GetOffsetFromEntityGivenWorldCoords(guincho, mundo.x, mundo.y, mundo.z)
+end
+
+local function cofreDoCarro(veh)
+    local osso = GetEntityBoneIndexByName(veh, 'engine')
+    if osso ~= -1 then return GetWorldPositionOfEntityBone(veh, osso) end
+    return GetOffsetFromEntityInWorldCoords(veh, 0.0, 1.5, 0.2)
+end
+
+local function motorPendurado(guincho)
+    for _, obj in ipairs(GetGamePool('CObject')) do
+        if GetEntityModel(obj) == Config.motor.propMotor and GetEntityAttachedTo(obj) == guincho then return obj end
+    end
+end
+
+--- Move o motor preso no guincho de `de` até `para` (posições relativas ao guincho).
+--- `parar` (opcional) interrompe no meio. Devolve a posição onde parou.
+local function animarMotor(motor, guincho, de, para, duracao, parar)
+    if not pedirControle(motor) then return de end
+    FreezeEntityPosition(motor, false)
+    local rot = Config.motor.gancho.rot
+    local atual = de
+    local inicio = GetGameTimer()
+    while DoesEntityExist(motor) and DoesEntityExist(guincho) do
+        local t = math.min(1.0, (GetGameTimer() - inicio) / duracao)
+        atual = de + (para - de) * suavizar(t)
+        AttachEntityToEntity(motor, guincho, 0, atual.x, atual.y, atual.z, rot.x, rot.y, rot.z,
+            false, false, false, false, 2, true)
+        if t >= 1.0 or (parar and parar()) then break end
+        Wait(0)
+    end
+    return atual
+end
+
+--- Barra de progresso enquanto o motor se move. Se cancelar, o motor volta.
+local function moverComProgresso(label, motor, guincho, de, para, duracao, podeCancelar)
+    local cancelou, terminou, parouEm = false, false, de
+    CreateThread(function()
+        parouEm = animarMotor(motor, guincho, de, para, duracao, function() return cancelou end)
+        terminou = true
+    end)
+    local ok = Trabalhar(duracao, label, { semCancelar = not podeCancelar })
+    if not ok then cancelou = true end
+    while not terminou do Wait(0) end
+    if not ok then animarMotor(motor, guincho, parouEm, de, 1500) end
+    return ok
+end
+
+---------------------------------------------------------------------
+-- Corda entre a ponta do guincho e o motor (cada jogador desenha a sua)
+---------------------------------------------------------------------
+local cordas = {} -- [motor] = { rope, guincho }
+
+local function pontoCorda(guincho)
+    local c = Config.motor.corda.pos
+    return GetOffsetFromEntityInWorldCoords(guincho, c.x, c.y, c.z)
+end
+
+local function pontoMotor(motor)
+    local m = Config.motor.corda.motor
+    return GetOffsetFromEntityInWorldCoords(motor, m.x, m.y, m.z)
+end
+
+local function criarCorda(motor, guincho)
+    RopeLoadTextures()
+    local limite = GetGameTimer() + 2000
+    while not RopeAreTexturesLoaded() and GetGameTimer() < limite do Wait(0) end
+    local a, b = pontoCorda(guincho), pontoMotor(motor)
+    local comprimento = math.max(0.1, #(a - b))
+    local rope = AddRope(a.x, a.y, a.z, 0.0, 0.0, 0.0, comprimento, Config.motor.corda.tipo, 10.0, 0.05, 1.0,
+        false, false, false, 1.0, false, 0)
+    AttachEntitiesToRope(rope, guincho, motor, a.x, a.y, a.z, b.x, b.y, b.z, comprimento, false, false, nil, nil)
+    return rope
+end
+
+local function apagarCorda(motor)
+    local c = cordas[motor]
+    if c then
+        if DoesRopeExist(c.rope) then DeleteRope(c.rope) end
+        cordas[motor] = nil
+    end
+end
+
+CreateThread(function()
+    if not Config.motor.corda.ativa then return end
+    while true do
+        local eu = GetEntityCoords(cache.ped)
+        local vistos = {}
+        for _, obj in ipairs(GetGamePool('CObject')) do
+            if GetEntityModel(obj) == Config.motor.propMotor and estadoMotor(obj) then
+                local pai = GetEntityAttachedTo(obj)
+                if pai ~= 0 and GetEntityModel(pai) == Config.motor.propGuincho and #(GetEntityCoords(obj) - eu) < 60.0 then
+                    vistos[obj] = true
+                    local c = cordas[obj]
+                    if not c or c.guincho ~= pai or not DoesRopeExist(c.rope) then
+                        apagarCorda(obj)
+                        cordas[obj] = { rope = criarCorda(obj, pai), guincho = pai }
+                    end
+                end
+            end
+        end
+        for obj in pairs(cordas) do
+            if not vistos[obj] then apagarCorda(obj) end
+        end
+
+        -- acompanha o motor subindo/descendo
+        local ate = GetGameTimer() + 300
+        repeat
+            for obj, c in pairs(cordas) do
+                if DoesEntityExist(obj) and DoesEntityExist(c.guincho) then
+                    RopeForceLength(c.rope, math.max(0.05, #(pontoCorda(c.guincho) - pontoMotor(obj))))
+                end
+            end
+            Wait(next(cordas) and 0 or 300)
+        until GetGameTimer() >= ate
+    end
+end)
+
+---------------------------------------------------------------------
+-- Esconde os guinchos que já vêm no MLO
 ---------------------------------------------------------------------
 CreateThread(function()
     if not Config.motor.esconderGuinchoDoMapa then return end
-    for _, p in ipairs(Config.guinchos) do
+    for _, p in ipairs(Config.esconderGuinchosMLO or {}) do
         CreateModelHide(p.x, p.y, p.z, 2.0, Config.motor.propGuincho, true)
     end
 end)
 
 ---------------------------------------------------------------------
--- Empurrar o guincho
+-- Vaga / bancada: utilidades
 ---------------------------------------------------------------------
-local empurrando = nil
+local ocupado = false
 
-local function prenderNoJogador(guincho)
-    local e = Config.motor.empurrar
-    AttachEntityToEntity(guincho, cache.ped, GetPedBoneIndex(cache.ped, 0), e.pos.x, e.pos.y, e.pos.z,
-        e.rot.x, e.rot.y, e.rot.z, false, false, false, false, 2, true)
+local function executar(fn, ...)
+    if ocupado then return end
+    ocupado = true
+    local args = { ... }
+    CreateThread(function()
+        local ok, err = pcall(fn, table.unpack(args))
+        if not ok then print('[pista_tuning] erro no motor: ' .. tostring(err)) end
+        ocupado = false
+    end)
 end
 
-local function soltarGuincho()
-    local guincho = empurrando
-    if not guincho then return end
-    empurrando = nil
+local function podeMecanico()
+    return not cache.vehicle and MeuNivel() >= Config.motor.nivel
+end
+
+local function diferencaAngulo(a, b) return (b - a + 180.0) % 360.0 - 180.0 end
+
+local function guinchoDaVaga(i)
+    for _, obj in ipairs(GetGamePool('CObject')) do
+        if GetEntityModel(obj) == Config.motor.propGuincho then
+            local st = estadoGuincho(obj)
+            if st and st.home == i then return obj end
+        end
+    end
+end
+
+local function carroNaVaga(i)
+    local v = Config.vagasMotor[i]
+    local centro = vec2(v.carro.x, v.carro.y)
+    local melhor, melhorDist
+    for _, veh in ipairs(GetGamePool('CVehicle')) do
+        local c = GetEntityCoords(veh)
+        local d = #(vec2(c.x, c.y) - centro)
+        if d <= v.raio and (not melhorDist or d < melhorDist) then melhor, melhorDist = veh, d end
+    end
+    return melhor
+end
+
+local function motorNaBancada(b)
+    local bc = vec3(b.x, b.y, b.z)
+    for _, m in ipairs(objetosPerto(Config.motor.propMotor, STATE_MOTOR, bc, 1.5)) do
+        if estadoMotor(m.obj)['local'] == 'bancada' then return m.obj end
+    end
+end
+
+--- Encaixa o carro na vaga (centro e direção certos)
+local function encaixarCarro(veh, v)
+    local c, h = GetEntityCoords(veh), GetEntityHeading(veh)
+    local alvo = vec3(v.carro.x, v.carro.y, c.z)
+    if #(c.xy - alvo.xy) < 0.15 and math.abs(diferencaAngulo(h, v.carro.w)) < 3.0 then return true end
+    if not pedirControle(veh) then return false end
+    FreezeEntityPosition(veh, true)
+    local giro = diferencaAngulo(h, v.carro.w)
+    local inicio, duracao = GetGameTimer(), 1200
+    CreateThread(function()
+        while DoesEntityExist(veh) do
+            local t = math.min(1.0, (GetGameTimer() - inicio) / duracao)
+            local k = suavizar(t)
+            local p = c + (alvo - c) * k
+            SetEntityCoordsNoOffset(veh, p.x, p.y, p.z, false, false, false)
+            SetEntityHeading(veh, h + giro * k)
+            if t >= 1.0 then break end
+            Wait(0)
+        end
+    end)
+    Trabalhar(duracao, 'Encaixando o carro na vaga...', { semCancelar = true })
+    FreezeEntityPosition(veh, false)
+    SetVehicleOnGroundProperly(veh)
+    return true
+end
+
+---------------------------------------------------------------------
+-- Carregar o motor nos braços
+---------------------------------------------------------------------
+local carregando = nil
+
+local function prenderNosBracos(motor)
+    local c = Config.motor.carregar
+    AttachEntityToEntity(motor, cache.ped, GetPedBoneIndex(cache.ped, 0), c.pos.x, c.pos.y, c.pos.z,
+        c.rot.x, c.rot.y, c.rot.z, false, false, false, false, 2, true)
+end
+
+local function pararDeCarregar()
+    carregando = nil
     lib.hideTextUI()
     StopAnimTask(cache.ped, ANIM_EMPURRAR.dict, ANIM_EMPURRAR.clip, 1.0)
-
-    if DoesEntityExist(guincho) and pedirControle(guincho) then
-        DetachEntity(guincho, true, false)
-        local pos = GetOffsetFromEntityInWorldCoords(cache.ped, 0.0, Config.motor.empurrar.pos.y, 0.0)
-        SetEntityCoords(guincho, pos.x, pos.y, pos.z, false, false, false, false)
-        SetEntityHeading(guincho, GetEntityHeading(cache.ped) + Config.motor.empurrar.rot.z)
-        PlaceObjectOnGroundProperly(guincho)
-        FreezeEntityPosition(guincho, true)
-    end
-    lib.callback.await('pista_tuning:server:soltarGuincho', false, ObjToNet(guincho))
 end
 
-local function empurrarGuincho(guincho)
-    if empurrando or cache.vehicle then return end
-    local ok, msg = lib.callback.await('pista_tuning:server:pegarGuincho', false, ObjToNet(guincho))
-    if not ok then return Avisar(msg, 'error') end
-    if not pedirControle(guincho) then
-        lib.callback.await('pista_tuning:server:soltarGuincho', false, ObjToNet(guincho))
-        return Avisar('Não foi possível pegar o guincho, tente de novo', 'error')
+local function largarNoChao()
+    local motor = carregando
+    if not motor then return end
+    pararDeCarregar()
+    if pedirControle(motor) then
+        DetachEntity(motor, true, false)
+        SetEntityCollision(motor, true, true) -- sem isso o Alt não "enxerga" o motor no chão
+        local pos = GetOffsetFromEntityInWorldCoords(cache.ped, 0.0, 0.9, 0.0)
+        SetEntityCoords(motor, pos.x, pos.y, pos.z, false, false, false, false)
+        PlaceObjectOnGroundProperly(motor)
+        FreezeEntityPosition(motor, true)
     end
+    Wait(300)
+    local ok, msg = lib.callback.await('pista_tuning:server:motorPosicionado', false, ObjToNet(motor), 'chao')
+    if ok then Avisar(msg, 'inform') end
+end
 
-    FreezeEntityPosition(guincho, false)
-    prenderNoJogador(guincho)
+local function iniciarCarga(motor)
+    if not pedirControle(motor) then return Avisar('Não foi possível pegar o motor, tente de novo', 'error') end
+
+    DetachEntity(motor, true, false)
+    FreezeEntityPosition(motor, false)
+    SetEntityCollision(motor, false, false)
+    prenderNosBracos(motor)
     lib.requestAnimDict(ANIM_EMPURRAR.dict)
-    empurrando = guincho
-    lib.showTextUI('[E] Soltar guincho', { position = 'left-center', icon = 'fa-solid fa-dolly' })
+    carregando = motor
+    lib.showTextUI('Carregando o motor  \n[E] na bancada ou no carro  \n[G] Largar no chão', { position = 'left-center', icon = 'fa-solid fa-box' })
 
     CreateThread(function()
-        while empurrando == guincho do
+        while carregando == motor do
             Wait(0)
             if not IsEntityPlayingAnim(cache.ped, ANIM_EMPURRAR.dict, ANIM_EMPURRAR.clip, 3) then
                 TaskPlayAnim(cache.ped, ANIM_EMPURRAR.dict, ANIM_EMPURRAR.clip, 8.0, -8.0, -1, 49, 0, false, false, false)
             end
-            DisableControlAction(0, 21, true)  -- correr
-            DisableControlAction(0, 22, true)  -- pular
-            DisableControlAction(0, 23, true)  -- entrar em veículo
-            DisableControlAction(0, 24, true)  -- atacar
-            DisableControlAction(0, 25, true)  -- mirar
-            DisableControlAction(0, 44, true)  -- cobertura
-            DisableControlAction(0, 140, true)
-            DisableControlAction(0, 141, true)
-            DisableControlAction(0, 142, true)
-
-            if IsControlJustPressed(0, 38) or IsEntityDead(cache.ped) or cache.vehicle or not DoesEntityExist(guincho) then
-                soltarGuincho()
+            for _, c in ipairs({ 21, 22, 23, 24, 25, 44, 140, 141, 142 }) do DisableControlAction(0, c, true) end
+            if IsControlJustPressed(0, 47) or IsEntityDead(cache.ped) or cache.vehicle then
+                largarNoChao()
+            elseif not DoesEntityExist(motor) then
+                pararDeCarregar()
             end
         end
     end)
 end
 
----------------------------------------------------------------------
--- Instalar peça interna (chamado pelo usarPeca)
----------------------------------------------------------------------
-local function motorAbertoProximo()
-    for _, m in ipairs(objetosPerto(Config.motor.propMotor, STATE_MOTOR, GetEntityCoords(cache.ped), 2.5)) do
-        local st = estadoMotor(m.obj)
-        if st.aberto and st['local'] == 'bancada' then return m.obj end
-    end
+local function comecarACarregar(motor)
+    local ok, msg = lib.callback.await('pista_tuning:server:pegarMotor', false, ObjToNet(motor))
+    if not ok then return Avisar(msg, 'error') end
+    iniciarCarga(motor)
 end
 
+---------------------------------------------------------------------
+-- Ações da vaga
+---------------------------------------------------------------------
+local function retirarMotor(i, veh)
+    if not NaOficina(GetEntityCoords(veh)) then return Avisar('Só dá para tirar o motor dentro da oficina', 'error') end
+    if not TemFerramenta('soquetes') then return Avisar('Você precisa do jogo de soquetes', 'error') end
+    if not encaixarCarro(veh, Config.vagasMotor[i]) then return Avisar('Não foi possível encaixar o carro', 'error') end
+
+    if not Trabalhar(Config.motor.tempoRetirar, 'Soltando e tirando o motor...', { capo = veh }) then return end
+    local ok, msg, motorNet = lib.callback.await('pista_tuning:server:retirarMotor', false, VehToNet(veh))
+    if not ok then return Avisar(msg, 'error') end
+    local motor = entidadeDaRede(motorNet)
+    if motor then iniciarCarga(motor) end
+    Avisar(msg, 'success', 6000)
+end
+
+local function recolocarMotor(veh)
+    if not TemFerramenta('soquetes') then return Avisar('Você precisa do jogo de soquetes', 'error') end
+    SetVehicleDoorOpen(veh, 4, false, false)
+    if not Trabalhar(Config.motor.tempoRecolocar, 'Colocando e fixando o motor...', { capo = veh }) then return end
+    local ok, msg = lib.callback.await('pista_tuning:server:recolocarMotor', false, VehToNet(veh))
+    if ok then pararDeCarregar() end
+    Avisar(msg, ok and 'success' or 'error', 6000)
+end
+
+local function abrirMenuVaga(i)
+    local v = Config.vagasMotor[i]
+    local veh = carroNaVaga(i)
+    local opcoes = {}
+
+    if veh then
+        local dados = DadosDo(veh)
+        local placa = qbx.getVehiclePlate(veh)
+        opcoes[#opcoes + 1] = {
+            title = ('Carro %s'):format(placa or ''),
+            description = dados.motor and 'Sem motor' or 'Com motor',
+            icon = 'fa-solid fa-car', readOnly = true,
+        }
+        if not dados.motor and not carregando then
+            opcoes[#opcoes + 1] = {
+                title = 'Retirar motor', icon = 'fa-solid fa-upload', iconColor = '#f1c232',
+                description = 'Precisa do jogo de soquetes. O motor vai para os seus braços.',
+                onSelect = function() executar(retirarMotor, i, veh) end,
+            }
+        elseif dados.motor and carregando then
+            local st = estadoMotor(carregando)
+            if st and st.plate == placa then
+                opcoes[#opcoes + 1] = {
+                    title = 'Recolocar motor', icon = 'fa-solid fa-download', iconColor = '#f1c232',
+                    description = 'Precisa do jogo de soquetes',
+                    onSelect = function() executar(recolocarMotor, veh) end,
+                }
+            else
+                opcoes[#opcoes + 1] = { title = 'Esse motor é de outro carro', description = st and ('Motor do carro %s'):format(st.plate) or '', icon = 'fa-solid fa-triangle-exclamation', readOnly = true }
+            end
+        elseif dados.motor then
+            opcoes[#opcoes + 1] = { title = 'O motor está fora', description = 'Busque o motor na bancada para recolocar', icon = 'fa-solid fa-circle-info', readOnly = true }
+        end
+    else
+        opcoes[#opcoes + 1] = { title = 'Nenhum carro na vaga', description = 'Pare o carro na vaga', icon = 'fa-solid fa-car', readOnly = true }
+    end
+
+    lib.registerContext({ id = 'pista_vaga_motor', title = v.label, options = opcoes })
+    lib.showContext('pista_vaga_motor')
+end
+
+---------------------------------------------------------------------
+-- Ações da bancada
+---------------------------------------------------------------------
 local function instalarNoMotor(motor, itemName)
     local peca = Config.itens[itemName]
     exports.ox_inventory:closeInventory()
@@ -168,6 +427,13 @@ local function instalarNoMotor(motor, itemName)
     Avisar(msg, ok and 'success' or 'error')
 end
 
+local function motorAbertoProximo()
+    for _, m in ipairs(objetosPerto(Config.motor.propMotor, STATE_MOTOR, GetEntityCoords(cache.ped), 2.5)) do
+        local st = estadoMotor(m.obj)
+        if st.aberto and st['local'] == 'bancada' then return m.obj end
+    end
+end
+
 function InstalarNoMotorProximo(itemName)
     if cache.vehicle then return Avisar('Saia do veículo', 'error') end
     local motor = motorAbertoProximo()
@@ -175,238 +441,196 @@ function InstalarNoMotorProximo(itemName)
         return Avisar('Essa peça vai dentro do motor: leve o motor até a bancada e abra com o torquímetro', 'error', 7000)
     end
     if not TemFerramenta('torquimetro') then return Avisar('Você precisa do torquímetro', 'error') end
-    instalarNoMotor(motor, itemName)
+    executar(instalarNoMotor, motor, itemName)
 end
 
----------------------------------------------------------------------
--- Menu do motor aberto
----------------------------------------------------------------------
-local function abrirMenuMotor(motor)
-    local dados, st = lib.callback.await('pista_tuning:server:dadosMotor', false, ObjToNet(motor))
-    if not dados then return end
+local function colocarNaBancada()
+    local motor = carregando
+    if not motor then return end
+    local ok, info = lib.callback.await('pista_tuning:server:lugarNaBancada', false, ObjToNet(motor))
+    if not ok then return Avisar(info, 'error') end
+    pararDeCarregar()
+    if not pedirControle(motor) then return end
+    DetachEntity(motor, true, false)
+    SetEntityCollision(motor, true, true)
+    SetEntityCoords(motor, info.x, info.y, info.z + 0.35, false, false, false, false)
+    SetEntityHeading(motor, info.h)
+    PlaceObjectOnGroundProperly(motor)
+    FreezeEntityPosition(motor, true)
+    Wait(300)
+    local certo, msg = lib.callback.await('pista_tuning:server:motorPosicionado', false, ObjToNet(motor), 'bancada')
+    Avisar(msg or 'Não foi possível colocar o motor', certo and 'success' or 'error')
+end
 
-    local opcoes = {
-        {
+local function abrirFechar(motor, abrir)
+    if not TemFerramenta('torquimetro') then return Avisar('Você precisa do torquímetro', 'error') end
+    local tempo = abrir and Config.motor.tempoAbrir or Config.motor.tempoFechar
+    if not Trabalhar(tempo, abrir and 'Abrindo o motor...' or 'Fechando e torqueando o motor...', { anim = ANIM_AGACHADO }) then return end
+    local ok, msg = lib.callback.await('pista_tuning:server:abrirFecharMotor', false, ObjToNet(motor), abrir)
+    Avisar(msg, ok and 'success' or 'error')
+end
+
+local function retirarDoMotor(motor, slot, label)
+    if not Trabalhar(15000, ('Retirando %s...'):format(label), { anim = ANIM_AGACHADO }) then return end
+    local ok, msg = lib.callback.await('pista_tuning:server:removerDoMotor', false, ObjToNet(motor), slot)
+    Avisar(msg, ok and 'success' or 'error')
+end
+
+local function abrirMenuBancada(b)
+    local motor = motorNaBancada(b)
+    local opcoes = {}
+
+    if not motor then
+        if carregando then
+            opcoes[#opcoes + 1] = {
+                title = 'Colocar o motor na bancada', icon = 'fa-solid fa-arrow-down', iconColor = '#f1c232',
+                onSelect = function() executar(colocarNaBancada) end,
+            }
+        else
+            opcoes[#opcoes + 1] = { title = 'Bancada vazia', description = 'Traga um motor da vaga', icon = 'fa-solid fa-table', readOnly = true }
+        end
+    else
+        local dados, st = lib.callback.await('pista_tuning:server:dadosMotor', false, ObjToNet(motor))
+        st = st or estadoMotor(motor)
+        dados = dados or {}
+        opcoes[#opcoes + 1] = {
             title = ('Motor do carro %s'):format(st.plate),
-            description = st.aberto and 'Aberto na bancada' or 'Fechado',
-            icon = 'fa-solid fa-gears',
-            readOnly = true,
-        },
-    }
+            description = st.aberto and 'Aberto' or 'Fechado',
+            icon = 'fa-solid fa-gears', readOnly = true,
+        }
 
-    for _, s in ipairs(Config.slots) do
-        if SlotEhDoMotor(s.id) then
-            local valor = dados[s.id]
-            local instalado = valor ~= nil and valor ~= false
+        if not st.aberto then
             opcoes[#opcoes + 1] = {
-                title = s.label,
-                description = TextoSlot(s.id, valor),
-                icon = instalado and 'fa-solid fa-circle-check' or 'fa-regular fa-circle',
-                iconColor = instalado and '#3fb950' or '#8b949e',
-                disabled = not instalado,
-                metadata = instalado and { 'Clique para retirar' } or nil,
-                onSelect = instalado and function()
-                    if not Trabalhar(15000, ('Retirando %s...'):format(s.label), { anim = ANIM_AGACHADO }) then return end
-                    local ok, msg = lib.callback.await('pista_tuning:server:removerDoMotor', false, ObjToNet(motor), s.id)
-                    Avisar(msg, ok and 'success' or 'error')
-                    if ok then abrirMenuMotor(motor) end
-                end or nil,
+                title = 'Abrir motor', icon = 'fa-solid fa-lock-open', iconColor = '#f1c232',
+                description = 'Precisa do torquímetro',
+                onSelect = function() executar(abrirFechar, motor, true) end,
+            }
+            if not carregando then
+                opcoes[#opcoes + 1] = {
+                    title = 'Pegar o motor', icon = 'fa-solid fa-hand', iconColor = '#58a6ff',
+                    description = 'Levar de volta para o guincho',
+                    onSelect = function() executar(comecarACarregar, motor) end,
+                }
+            end
+        else
+            for _, s in ipairs(Config.slots) do
+                if SlotEhDoMotor(s.id) then
+                    local valor = dados[s.id]
+                    local instalado = valor ~= nil and valor ~= false
+                    opcoes[#opcoes + 1] = {
+                        title = s.label,
+                        description = TextoSlot(s.id, valor),
+                        icon = instalado and 'fa-solid fa-circle-check' or 'fa-regular fa-circle',
+                        iconColor = instalado and '#3fb950' or '#8b949e',
+                        disabled = not instalado,
+                        metadata = instalado and { 'Clique para retirar' } or nil,
+                        onSelect = instalado and function() executar(retirarDoMotor, motor, s.id, s.label) end or nil,
+                    }
+                end
+            end
+            for nome, peca in pairs(Config.itens) do
+                if peca.motor and TemItem(nome) then
+                    opcoes[#opcoes + 1] = {
+                        title = ('Instalar %s'):format(peca.label),
+                        description = ('Nível %d'):format(peca.nivel),
+                        icon = 'fa-solid fa-screwdriver-wrench', iconColor = '#58a6ff',
+                        onSelect = function() executar(instalarNoMotor, motor, nome) end,
+                    }
+                end
+            end
+            opcoes[#opcoes + 1] = {
+                title = 'Fechar motor', icon = 'fa-solid fa-lock', iconColor = '#f1c232',
+                description = 'Precisa do torquímetro',
+                onSelect = function() executar(abrirFechar, motor, false) end,
             }
         end
     end
 
-    for nome, peca in pairs(Config.itens) do
-        if peca.motor and TemItem(nome) then
-            opcoes[#opcoes + 1] = {
-                title = ('Instalar %s'):format(peca.label),
-                description = ('Nível %d'):format(peca.nivel),
-                icon = 'fa-solid fa-screwdriver-wrench',
-                iconColor = '#f1c232',
-                onSelect = function() instalarNoMotor(motor, nome) end,
-            }
-        end
+    lib.registerContext({ id = 'pista_bancada', title = 'Bancada do motor', options = opcoes })
+    lib.showContext('pista_bancada')
+end
+
+---------------------------------------------------------------------
+-- [E] na vaga e na bancada
+---------------------------------------------------------------------
+local textoAtual = nil
+
+local function mostrarTexto(texto)
+    if textoAtual ~= texto then
+        textoAtual = texto
+        lib.showTextUI(texto, { position = 'left-center', icon = 'fa-solid fa-wrench' })
     end
-
-    lib.registerContext({ id = 'pista_tuning_motor', title = 'Motor na bancada', options = opcoes })
-    lib.showContext('pista_tuning_motor')
 end
 
----------------------------------------------------------------------
--- ox_target
----------------------------------------------------------------------
-local function podeMecanico()
-    return not cache.vehicle and not empurrando and MeuNivel() >= Config.motor.nivel
+local function esconderTexto()
+    if textoAtual then
+        textoAtual = nil
+        if not carregando then lib.hideTextUI() end
+    end
 end
 
+-- Um laço só decide qual menu vale (vaga ou bancada), sem um apagar o outro.
+-- A bancada tem prioridade quando você está colado nela.
 CreateThread(function()
-    -- Guincho
-    exports.ox_target:addModel(Config.motor.propGuincho, {
-        {
-            name = 'pista_guincho_empurrar',
-            icon = 'fa-solid fa-dolly',
-            label = 'Empurrar guincho',
-            distance = 2.5,
-            canInteract = function(entity)
-                local st = estadoGuincho(entity)
-                return st and not st.carregadoPor and podeMecanico()
-            end,
-            onSelect = function(data) empurrarGuincho(data.entity) end,
-        },
-        {
-            name = 'pista_guincho_bancada',
-            icon = 'fa-solid fa-arrow-down',
-            label = 'Descer motor na bancada',
-            distance = 2.5,
-            canInteract = function(entity)
-                local st = estadoGuincho(entity)
-                return st and st.motor and not st.carregadoPor and podeMecanico()
-            end,
-            onSelect = function(data)
-                local guincho = data.entity
-                local ok, info = lib.callback.await('pista_tuning:server:podeDescerNaBancada', false, ObjToNet(guincho))
-                if not ok then return Avisar(info, 'error') end
-                if not Trabalhar(Config.motor.tempoBancada, 'Descendo o motor na bancada...') then return end
+    while true do
+        local espera = 500
+        if podeMecanico() and not ocupado then
+            local eu = GetEntityCoords(cache.ped)
+            local alvo, tipo, indice
 
-                local motor = entidadeDaRede(info.motor)
-                if not motor or not pedirControle(motor) then return Avisar('Não foi possível mexer no motor', 'error') end
-                DetachEntity(motor, true, false)
-                SetEntityCoords(motor, info.x, info.y, info.z, false, false, false, false)
-                SetEntityHeading(motor, info.h)
-                PlaceObjectOnGroundProperly(motor)
-                FreezeEntityPosition(motor, true)
-                Wait(300) -- deixa a posição sincronizar antes do servidor salvar
+            for bi, b in ipairs(Config.bancadas) do
+                if #(eu.xy - vec2(b.x, b.y)) <= 1.8 then alvo, tipo, indice = b, 'bancada', bi break end
+            end
+            if not alvo and not carregando then
+                for _, m in ipairs(objetosPerto(Config.motor.propMotor, STATE_MOTOR, eu, 1.6)) do
+                    local onde = estadoMotor(m.obj)['local']
+                    -- 'mao' sem estar preso em ninguém = ficou no chão por algum erro
+                    if onde == 'chao' or (onde == 'mao' and GetEntityAttachedTo(m.obj) == 0) then
+                        alvo, tipo = m.obj, 'chao' break
+                    end
+                end
+            end
+            if not alvo then
+                for vi, v in ipairs(Config.vagasMotor) do
+                    if #(eu.xy - vec2(v.carro.x, v.carro.y)) <= v.raio + 1.5 then
+                        alvo, tipo, indice = v, 'vaga', vi break
+                    end
+                end
+            end
 
-                local certo, msg = lib.callback.await('pista_tuning:server:motorNaBancada', false, ObjToNet(guincho), info.bancada)
-                Avisar(msg or 'Não foi possível descer o motor', certo and 'success' or 'error')
-            end,
-        },
-        {
-            name = 'pista_guincho_guardar',
-            icon = 'fa-solid fa-box',
-            label = 'Guardar guincho',
-            distance = 2.5,
-            canInteract = function(entity)
-                local st = estadoGuincho(entity)
-                if not st or st.carregadoPor or st.motor or not podeMecanico() then return false end
-                local p = Config.guinchos[st.home]
-                return p and #(GetEntityCoords(entity) - vec3(p.x, p.y, p.z)) <= 6.0
-            end,
-            onSelect = function(data)
-                local ok, msg = lib.callback.await('pista_tuning:server:guardarGuincho', false, ObjToNet(data.entity))
-                Avisar(msg, ok and 'success' or 'error')
-            end,
-        },
-    })
+            if alvo then
+                espera = 0
+                local textos = { bancada = '[E] Bancada', vaga = '[E] Motor', chao = '[E] Pegar o motor' }
+                if not carregando then mostrarTexto(textos[tipo]) end
+                if IsControlJustReleased(0, 38) then
+                    esconderTexto()
+                    if tipo == 'bancada' then abrirMenuBancada(alvo)
+                    elseif tipo == 'chao' then executar(comecarACarregar, alvo)
+                    else abrirMenuVaga(indice) end
+                end
+            else
+                esconderTexto()
+            end
+        else
+            esconderTexto()
+        end
+        Wait(espera)
+    end
+end)
 
-    -- Motor fora do carro
+-- Motor largado no chão: pegar com o olho (Alt)
+CreateThread(function()
     exports.ox_target:addModel(Config.motor.propMotor, {
         {
-            name = 'pista_motor_pendurar',
-            icon = 'fa-solid fa-link',
-            label = 'Pendurar no guincho',
+            name = 'pista_motor_pegar',
+            icon = 'fa-solid fa-hand',
+            label = 'Pegar o motor',
             distance = 2.5,
             canInteract = function(entity)
                 local st = estadoMotor(entity)
-                return st and st['local'] ~= 'guincho' and not st.aberto and podeMecanico()
-                    and guinchoParado(GetEntityCoords(entity), Config.motor.distanciaBancada + 0.5, false) ~= nil
+                return st and st['local'] == 'chao' and not carregando and podeMecanico()
             end,
-            onSelect = function(data)
-                local motor = data.entity
-                if not Trabalhar(Config.motor.tempoBancada, 'Prendendo o motor no gancho...') then return end
-                local ok, msg, guinchoNet = lib.callback.await('pista_tuning:server:pendurarMotor', false, ObjToNet(motor))
-                if not ok then return Avisar(msg, 'error') end
-                local guincho = entidadeDaRede(guinchoNet)
-                if guincho then pendurarNoGancho(motor, guincho) end
-                Avisar(msg, 'success')
-            end,
-        },
-        {
-            name = 'pista_motor_abrir',
-            icon = 'fa-solid fa-lock-open',
-            label = 'Abrir motor',
-            distance = 2.5,
-            canInteract = function(entity)
-                local st = estadoMotor(entity)
-                return st and st['local'] == 'bancada' and not st.aberto and podeMecanico()
-            end,
-            onSelect = function(data)
-                if not TemFerramenta('torquimetro') then return Avisar('Você precisa do torquímetro', 'error') end
-                if not Trabalhar(Config.motor.tempoAbrir, 'Abrindo o motor...', { anim = ANIM_AGACHADO }) then return end
-                local ok, msg = lib.callback.await('pista_tuning:server:abrirFecharMotor', false, ObjToNet(data.entity), true)
-                Avisar(msg, ok and 'success' or 'error')
-                if ok then abrirMenuMotor(data.entity) end
-            end,
-        },
-        {
-            name = 'pista_motor_pecas',
-            icon = 'fa-solid fa-gears',
-            label = 'Peças do motor',
-            distance = 2.5,
-            canInteract = function(entity)
-                local st = estadoMotor(entity)
-                return st and st['local'] == 'bancada' and st.aberto and podeMecanico()
-            end,
-            onSelect = function(data) abrirMenuMotor(data.entity) end,
-        },
-        {
-            name = 'pista_motor_fechar',
-            icon = 'fa-solid fa-lock',
-            label = 'Fechar motor',
-            distance = 2.5,
-            canInteract = function(entity)
-                local st = estadoMotor(entity)
-                return st and st['local'] == 'bancada' and st.aberto and podeMecanico()
-            end,
-            onSelect = function(data)
-                if not TemFerramenta('torquimetro') then return Avisar('Você precisa do torquímetro', 'error') end
-                if not Trabalhar(Config.motor.tempoFechar, 'Fechando e torqueando o motor...', { anim = ANIM_AGACHADO }) then return end
-                local ok, msg = lib.callback.await('pista_tuning:server:abrirFecharMotor', false, ObjToNet(data.entity), false)
-                Avisar(msg, ok and 'success' or 'error')
-            end,
-        },
-    })
-
-    -- Carro: tirar / recolocar motor
-    exports.ox_target:addGlobalVehicle({
-        {
-            name = 'pista_motor_retirar',
-            icon = 'fa-solid fa-upload',
-            label = 'Retirar motor',
-            distance = 3.0,
-            canInteract = function(entity)
-                return podeMecanico() and not DadosDo(entity).motor
-                    and guinchoParado(frenteDo(entity), Config.motor.distanciaGuincho, false) ~= nil
-            end,
-            onSelect = function(data)
-                local veh = data.entity
-                if not NaOficina(GetEntityCoords(veh)) then return Avisar('Só dá para tirar o motor dentro da oficina', 'error') end
-                if not TemFerramenta('soquetes') then return Avisar('Você precisa do jogo de soquetes', 'error') end
-                if not Trabalhar(Config.motor.tempoRetirar, 'Soltando o motor e prendendo no gancho...', { capo = veh }) then return end
-
-                local ok, msg, motorNet, guinchoNet = lib.callback.await('pista_tuning:server:retirarMotor', false, VehToNet(veh))
-                if not ok then return Avisar(msg, 'error') end
-                local motor, guincho = entidadeDaRede(motorNet), entidadeDaRede(guinchoNet)
-                if motor and guincho then pendurarNoGancho(motor, guincho) end
-                SetVehicleDoorOpen(veh, 4, false, false)
-                Avisar(msg, 'success', 6000)
-            end,
-        },
-        {
-            name = 'pista_motor_recolocar',
-            icon = 'fa-solid fa-download',
-            label = 'Recolocar motor',
-            distance = 3.0,
-            canInteract = function(entity)
-                if not podeMecanico() or not DadosDo(entity).motor then return false end
-                return guinchoParado(frenteDo(entity), Config.motor.distanciaGuincho, qbx.getVehiclePlate(entity)) ~= nil
-            end,
-            onSelect = function(data)
-                local veh = data.entity
-                if not TemFerramenta('soquetes') then return Avisar('Você precisa do jogo de soquetes', 'error') end
-                if not Trabalhar(Config.motor.tempoRecolocar, 'Descendo e fixando o motor...', { capo = veh }) then return end
-                local ok, msg = lib.callback.await('pista_tuning:server:recolocarMotor', false, VehToNet(veh))
-                Avisar(msg, ok and 'success' or 'error', 6000)
-            end,
+            onSelect = function(data) executar(comecarACarregar, data.entity) end,
         },
     })
 end)
@@ -430,19 +654,23 @@ end)
 
 RegisterNetEvent('pista_tuning:client:ajuste', function(tipo, x, y, z, rz)
     local cfg = Config.motor[tipo]
+    if not cfg then return end
     cfg.pos = vec3(x + 0.0, y + 0.0, z + 0.0)
-    cfg.rot = vec3(cfg.rot.x, cfg.rot.y, rz + 0.0)
+    if cfg.rot then cfg.rot = vec3(cfg.rot.x, cfg.rot.y, rz + 0.0) end
 
-    if tipo == 'empurrar' and empurrando then
-        prenderNoJogador(empurrando)
+    if tipo == 'carregar' and carregando then
+        prenderNosBracos(carregando)
     elseif tipo == 'gancho' then
         for _, m in ipairs(objetosPerto(Config.motor.propMotor, STATE_MOTOR, GetEntityCoords(cache.ped), 15.0)) do
             local pai = GetEntityAttachedTo(m.obj)
-            if pai ~= 0 then pendurarNoGancho(m.obj, pai) end
+            if pai ~= 0 and GetEntityModel(pai) == Config.motor.propGuincho then pendurarNoGancho(m.obj, pai) end
         end
+    elseif tipo == 'corda' then
+        for motor in pairs(cordas) do apagarCorda(motor) end
     end
 
-    local linha = ('%s = { pos = vec3(%.2f, %.2f, %.2f), rot = vec3(0.0, 0.0, %.1f) },'):format(tipo, x, y, z, rz)
+    local linha = tipo == 'corda' and ('corda pos = vec3(%.2f, %.2f, %.2f)'):format(x, y, z)
+        or ('%s = { pos = vec3(%.2f, %.2f, %.2f), rot = vec3(0.0, 0.0, %.1f) },'):format(tipo, x, y, z, rz)
     lib.setClipboard(linha)
     print('[pista_tuning] ' .. linha)
     Avisar('Ajuste aplicado e copiado. Me mande quando ficar bom.', 'success', 6000)
@@ -450,14 +678,12 @@ end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    if empurrando then
-        lib.hideTextUI()
-        StopAnimTask(cache.ped, ANIM_EMPURRAR.dict, ANIM_EMPURRAR.clip, 1.0)
-    end
-    exports.ox_target:removeModel(Config.motor.propGuincho, { 'pista_guincho_empurrar', 'pista_guincho_bancada', 'pista_guincho_guardar' })
-    exports.ox_target:removeModel(Config.motor.propMotor, { 'pista_motor_pendurar', 'pista_motor_abrir', 'pista_motor_pecas', 'pista_motor_fechar' })
-    exports.ox_target:removeGlobalVehicle({ 'pista_motor_retirar', 'pista_motor_recolocar' })
-    for _, p in ipairs(Config.guinchos) do
+    for motor in pairs(cordas) do apagarCorda(motor) end
+    RopeUnloadTextures()
+    if carregando then pararDeCarregar() end
+    if textoAtual then lib.hideTextUI() end
+    exports.ox_target:removeModel(Config.motor.propMotor, 'pista_motor_pegar')
+    for _, p in ipairs(Config.esconderGuinchosMLO or {}) do
         RemoveModelHide(p.x, p.y, p.z, 2.0, Config.motor.propGuincho, false)
     end
 end)

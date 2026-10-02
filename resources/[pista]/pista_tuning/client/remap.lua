@@ -13,17 +13,16 @@ local function previa(valores)
     local chip = Config.efeitos.chip[dados.chip] or {}
     local r = CalcularRemap(remap, dados)
     local risco = r.risco
-    -- as regras fixas também pesam (stage 2+ sem intercooler, stage 3 sem pistão)
-    for _, regra in ipairs(Config.risco.regras) do
-        if (dados.chip or 0) >= regra.chipMinimo and not dados[regra.semPeca] then
-            risco = math.min(100.0, risco + regra.dano * 3.0)
-        end
+    -- os riscos fixos da montagem também pesam
+    for _, regra in ipairs(RiscosMontagem(dados)) do
+        risco = math.min(100.0, risco + regra.dano * 3.0)
     end
+    local motor = EfeitosMotor(dados)
     return {
         remap = remap,
-        forca = (chip.forca or 0) + r.forca,
-        vmax = (chip.vmax or 0) + r.vmax,
-        giro = (chip.giro or 0) + r.giro,
+        forca = (chip.forca or 0) + motor.forca + r.forca,
+        vmax = (chip.vmax or 0) + motor.vmax + r.vmax,
+        giro = (chip.giro or 0) + motor.giro + r.giro,
         risco = risco,
     }
 end
@@ -45,7 +44,8 @@ exports('usarNotebook', function()
     aberto = { veh = veh, netId = netId, dados = info.dados }
 
     local lim = table.clone(Config.remap.limites[info.dados.chip])
-    lim.limitadorMax = LimitadorMaximo(info.dados) -- cabeçote libera mais giro
+    lim.limitadorMax = LimitadorMaximo(info.dados) -- cabeçote e bielas mudam o giro máximo
+    lim.turboMax = TurboMaximo(info.dados)         -- pistão forjado aguenta mais pressão
     SendNUIMessage({
         acao = 'abrir',
         placa = info.placa,
@@ -54,8 +54,10 @@ exports('usarNotebook', function()
         pecas = {
             turbo = info.dados.turbo == true,
             intercooler = info.dados.intercooler == true,
-            pistao = info.dados.pistao == true,
-            cabecote = info.dados.cabecote ~= nil,
+            pistao = TipoPistao(info.dados) or false,
+            cabecote = info.dados.cabecote or false,
+            junta = info.dados.junta == true,
+            bielas = info.dados.bielas == true,
         },
         faixas = Config.remap.faixas,
         limites = lim,

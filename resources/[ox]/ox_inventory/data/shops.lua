@@ -6,26 +6,37 @@ return {
 			id = 446, colour = 5, scale = 0.7
 		}, inventory = {
 			-- Ferramentas
-			{ name = 'jogo_soquetes', price = 1500 },
-			{ name = 'torquimetro', price = 2500 },
-			{ name = 'notebook_remap', price = 15000 },
+			{ name = 'jogo_soquetes', price = 1 },
+			{ name = 'torquimetro', price = 1 },
+			{ name = 'notebook_remap', price = 1 },
 			-- Peças externas
-			{ name = 'peca_turbo', price = 25000 },
-			{ name = 'peca_intercooler', price = 12000 },
-			{ name = 'kit_nitro', price = 20000 },
-			{ name = 'garrafa_nitro', price = 2500 },
+			{ name = 'peca_turbo', price = 1 },
+			{ name = 'peca_intercooler', price = 1 },
+			{ name = 'kit_nitro', price = 1 },
+			{ name = 'garrafa_nitro', price = 1 },
 			-- Chips
-			{ name = 'chip_stage1', price = 8000 },
-			{ name = 'chip_stage2', price = 18000 },
-			{ name = 'chip_stage3', price = 35000 },
+			{ name = 'chip_stage1', price = 1 },
+			{ name = 'chip_stage2', price = 1 },
+			{ name = 'chip_stage3', price = 1 },
 			-- Peças do motor
-			{ name = 'peca_pistao_forjado', price = 30000 },
-			{ name = 'cabecote_retrabalhado', price = 20000 },
-			{ name = 'cabecote_competicao', price = 45000 },
+			{ name = 'peca_pistao_taxado', price = 1 },
+			{ name = 'peca_pistao_forjado', price = 1 },
+			{ name = 'junta_reforcada', price = 1 },
+			{ name = 'bielas_forjadas', price = 1 },
+			{ name = 'cabecote_retrabalhado', price = 1 },
+			{ name = 'cabecote_competicao', price = 1 },
+			-- Freio e transmissão (elevador)
+			{ name = 'freio_rua', price = 1 },
+			{ name = 'freio_esportivo', price = 1 },
+			{ name = 'freio_competicao', price = 1 },
+			{ name = 'cambio_rua', price = 1 },
+			{ name = 'cambio_esportivo', price = 1 },
+			{ name = 'cambio_competicao', price = 1 },
+			{ name = 'suspensao_regulavel', price = 1 },
 		}, locations = {
-			vec3(-345.39, -122.65, 38.01),
+			vec3(-344.27, -126.84, 38.01),
 		}, targets = {
-			{ loc = vec3(-345.39, -122.65, 39.0), length = 1.6, width = 1.2, heading = 64.7, minZ = 38.0, maxZ = 40.2, distance = 2.0 },
+			{ loc = vec3(-344.27, -126.84, 39.0), length = 1.6, width = 1.2, heading = 68.4, minZ = 38.0, maxZ = 40.2, distance = 2.0 },
 		}
 	},
 
