@@ -466,6 +466,9 @@ end
 
 local function abrir(tipo, veh)
     if sessao then return end
+    if tipo == 'estetica' and not Config.esteticaLigada then
+        return Avisar('A oficina de estética ainda não está liberada', 'error')
+    end
     if not veh or not DoesEntityExist(veh) then return Avisar('Nenhum carro aqui', 'error') end
     local ok, err = lib.callback.await('pista_estetica:server:abrir', false, VehToNet(veh), tipo)
     if not ok then return Avisar(err or 'Não foi possível abrir', 'error') end
@@ -648,6 +651,7 @@ end
 
 CreateThread(function()
     for _, l in ipairs(Config.locais) do
+        if l.tipo == 'estetica' and not Config.esteticaLigada then goto proximo end
         local b = Config.blips[l.tipo]
         if b then
             local blip = AddBlipForCoord(l.coords.x, l.coords.y, l.coords.z)
@@ -692,6 +696,7 @@ CreateThread(function()
                 if mostrando then lib.hideTextUI() mostrando = false end
             end,
         })
+        ::proximo::
     end
 end)
 

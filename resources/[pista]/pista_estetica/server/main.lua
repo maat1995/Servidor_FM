@@ -35,6 +35,7 @@ end
 
 local function validar(source, netId, tipo)
     if tipo ~= 'pintura' and tipo ~= 'estetica' then return nil, 'Serviço inválido' end
+    if tipo == 'estetica' and not Config.esteticaLigada then return nil, 'A oficina de estética ainda não está liberada' end
     local veh = NetworkGetEntityFromNetworkId(netId or 0)
     if not veh or veh == 0 or not DoesEntityExist(veh) or GetEntityType(veh) ~= 2 then
         return nil, 'Carro não encontrado'
@@ -165,6 +166,6 @@ lib.addCommand('estetica', {
     params = { { name = 'tipo', type = 'string', help = 'pintura ou estetica', optional = true } },
     restricted = 'group.admin',
 }, function(source, args)
-    local tipo = args.tipo == 'pintura' and 'pintura' or 'estetica'
+    local tipo = args.tipo == 'estetica' and 'estetica' or 'pintura'
     TriggerClientEvent('pista_estetica:client:abrirTeste', source, tipo)
 end)

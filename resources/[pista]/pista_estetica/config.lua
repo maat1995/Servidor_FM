@@ -7,6 +7,9 @@ Config = {}
 Config.job = 'mechanic'
 Config.precisaServico = true
 
+-- Etapas: 1 = só a cabine de pintura | 2 = liga também a oficina de estética
+Config.esteticaLigada = false
+
 ---------------------------------------------------------------------
 -- LOCAIS
 ---------------------------------------------------------------------
