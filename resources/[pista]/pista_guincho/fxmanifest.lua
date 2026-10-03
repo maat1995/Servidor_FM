@@ -11,7 +11,10 @@ shared_scripts {
     '@ox_lib/init.lua',
     'config.lua',
 }
-client_script 'client/main.lua'
+client_scripts {
+    '@qbx_core/modules/playerdata.lua',
+    'client/main.lua',
+}
 server_script 'server/main.lua'
 
 -- O modelo do mod substitui o "flatbed" do jogo (pasta stream)
