@@ -1,3 +1,4 @@
 server.cfg
 *.log
 cache/
+resources/[[]pista]/pista_guincho/stream/
