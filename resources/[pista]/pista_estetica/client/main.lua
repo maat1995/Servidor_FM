@@ -457,7 +457,6 @@ local function encerrar(manter)
     if DoesEntityExist(s.veh) then
         SetVehicleLights(s.veh, 0)
         SetVehicleDoorShut(s.veh, 4, false)
-        if s.tipo == 'pintura' then SetVehicleEngineOn(s.veh, false, true, true) end
         FreezeEntityPosition(s.veh, false)
     end
     pararCamera()
@@ -645,15 +644,10 @@ end)
 -- Locais: [E] com o carro dentro (mecânico a pé)
 ---------------------------------------------------------------------
 local function carroNoLocal(l)
-    if l.tipo == 'estetica' then
-        -- estética: o mecânico está dirigindo o carro, parado no local
-        local veh = cache.vehicle
-        if veh and cache.seat == -1 and #(GetEntityCoords(veh) - l.coords.xyz) <= (l.raio or 4.0) then return veh end
-        return nil
-    end
-    if cache.vehicle then return nil end
-    local veh = lib.getClosestVehicle(l.coords.xyz, l.raio or 4.0, false)
-    if veh and GetPedInVehicleSeat(veh, -1) == 0 then return veh end
+    -- o mecânico está dirigindo o carro, parado no local
+    local veh = cache.vehicle
+    if veh and cache.seat == -1 and #(GetEntityCoords(veh) - l.coords.xyz) <= (l.raio or 4.0) then return veh end
+    return nil
 end
 
 CreateThread(function()
@@ -709,12 +703,8 @@ end)
 
 -- /estetica [pintura|estetica] (admin): abre no carro mais perto, em qualquer lugar
 RegisterNetEvent('pista_estetica:client:abrirTeste', function(tipo)
-    if tipo == 'estetica' then
-        if not cache.vehicle or cache.seat ~= -1 then return Avisar('Entre no carro, no banco do motorista', 'error') end
-        return abrir(tipo, cache.vehicle)
-    end
-    if cache.vehicle then return Avisar('Saia do carro e fique do lado dele', 'error') end
-    abrir(tipo, lib.getClosestVehicle(GetEntityCoords(cache.ped), 6.0, false))
+    if not cache.vehicle or cache.seat ~= -1 then return Avisar('Entre no carro, no banco do motorista', 'error') end
+    abrir(tipo, cache.vehicle)
 end)
 
 AddEventHandler('onResourceStop', function(res)
