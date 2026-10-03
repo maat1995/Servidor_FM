@@ -56,9 +56,22 @@ local function prender(guincho, carro)
         0.0, 0.0, 0.0, false, false, false, false, 2, true)
 end
 
-local function carregar(guincho)
-    local carro = carroAtras(guincho)
-    if not carro then return avisar('Deixe o carro logo atrás do guincho', 'error') end
+--- Guincho vazio mais perto do carro
+local function guinchoPerto(carro)
+    local c = GetEntityCoords(carro)
+    local melhor, melhorDist
+    for _, veh in ipairs(GetGamePool('CVehicle')) do
+        if GetEntityModel(veh) == Config.modelo and veh ~= carro and not Entity(veh).state[STATE] then
+            local d = #(GetEntityCoords(veh) - c)
+            if d <= Config.distanciaGuincho and (not melhorDist or d < melhorDist) then melhor, melhorDist = veh, d end
+        end
+    end
+    return melhor
+end
+
+local function carregar(guincho, carro)
+    carro = carro or carroAtras(guincho)
+    if not carro then return avisar('Deixe o carro perto da traseira do guincho', 'error') end
     if GetPedInVehicleSeat(carro, -1) ~= 0 then return avisar('Tire o motorista do carro', 'error') end
     if not trabalhar('Prendendo o carro na plataforma...') then return end
     local ok, msg = lib.callback.await('pista_guincho:server:carregar', false, VehToNet(guincho), VehToNet(carro))
@@ -94,6 +107,24 @@ local function executar(fn, ...)
 end
 
 CreateThread(function()
+    -- Alt no carro quebrado: coloca no guincho vazio mais perto
+    exports.ox_target:addGlobalVehicle({
+        {
+            name = 'pista_guincho_colocar',
+            icon = 'fa-solid fa-truck-pickup',
+            label = 'Colocar no guincho',
+            distance = 3.0,
+            canInteract = function(carro)
+                return not ocupado and not cache.vehicle and souMecanico() and GetEntityModel(carro) ~= Config.modelo
+                    and not IsEntityAttached(carro) and guinchoPerto(carro) ~= nil
+            end,
+            onSelect = function(data)
+                local guincho = guinchoPerto(data.entity)
+                if guincho then executar(carregar, guincho, data.entity) end
+            end,
+        },
+    })
+
     exports.ox_target:addModel(Config.modelo, {
         {
             name = 'pista_guincho_carregar',
@@ -146,5 +177,6 @@ end)
 AddEventHandler('onResourceStop', function(res)
     if res == GetCurrentResourceName() then
         exports.ox_target:removeModel(Config.modelo, { 'pista_guincho_carregar', 'pista_guincho_descarregar' })
+        exports.ox_target:removeGlobalVehicle({ 'pista_guincho_colocar' })
     end
 end)
