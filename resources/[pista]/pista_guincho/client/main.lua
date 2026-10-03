@@ -180,3 +180,89 @@ AddEventHandler('onResourceStop', function(res)
         exports.ox_target:removeGlobalVehicle({ 'pista_guincho_colocar' })
     end
 end)
+
+-- /guinchodebug: mostra por que a opção não aparece
+RegisterCommand('guinchodebug', function()
+    local job = QBX and QBX.PlayerData and QBX.PlayerData.job
+    local eu = GetEntityCoords(cache.ped)
+    local guincho, dg
+    for _, veh in ipairs(GetGamePool('CVehicle')) do
+        if GetEntityModel(veh) == Config.modelo then
+            local d = #(GetEntityCoords(veh) - eu)
+            if not dg or d < dg then guincho, dg = veh, d end
+        end
+    end
+    local carro = lib.getClosestVehicle(eu, 6.0, false)
+    local linhas = {
+        ('Emprego: %s | em serviço: %s | pode usar: %s'):format(job and job.name or '?', tostring(job and job.onduty), tostring(souMecanico())),
+        guincho and ('Guincho mais perto: %.1f m | carregado: %s'):format(dg, tostring(Entity(guincho).state[STATE] ~= nil))
+            or 'Nenhum guincho (modelo flatbed) encontrado por perto',
+        carro and ('Carro mais perto: %s | é o guincho: %s | preso: %s | guincho vazio a até %.0f m: %s'):format(
+            GetDisplayNameFromVehicleModel(GetEntityModel(carro)), tostring(carro == guincho),
+            tostring(IsEntityAttached(carro)), Config.distanciaGuincho, tostring(guinchoPerto(carro) ~= nil))
+            or 'Nenhum carro perto',
+    }
+    lib.alertDialog({ header = 'Diagnóstico do guincho', content = table.concat(linhas, '  \n'), centered = true })
+end, false)
+
+---------------------------------------------------------------------
+-- [E] perto do carro: colocar no guincho / descarregar
+---------------------------------------------------------------------
+local function texto3D(pos, texto)
+    SetDrawOrigin(pos.x, pos.y, pos.z, 0)
+    SetTextScale(0.35, 0.35)
+    SetTextFont(4)
+    SetTextColour(255, 255, 255, 235)
+    SetTextOutline()
+    SetTextCentre(true)
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(texto)
+    EndTextCommandDisplayText(0.0, 0.0)
+    ClearDrawOrigin()
+end
+
+CreateThread(function()
+    local alvo, acao, guinchoAlvo
+    local proxima = 0
+    while true do
+        local espera = 400
+        if not cache.vehicle and not ocupado then
+            if GetGameTimer() >= proxima then
+                proxima = GetGameTimer() + 250
+                alvo, acao, guinchoAlvo = nil, nil, nil
+                local eu = GetEntityCoords(cache.ped)
+                -- guincho carregado perto: descarregar
+                for _, veh in ipairs(GetGamePool('CVehicle')) do
+                    if GetEntityModel(veh) == Config.modelo and Entity(veh).state[STATE]
+                        and #(GetEntityCoords(veh) - eu) <= 6.0 then
+                        alvo, acao, guinchoAlvo = veh, 'descarregar', veh
+                        break
+                    end
+                end
+                -- carro perto com guincho vazio por perto: colocar
+                if not alvo then
+                    local carro = lib.getClosestVehicle(eu, 3.5, false)
+                    if carro and GetEntityModel(carro) ~= Config.modelo and not IsEntityAttached(carro) then
+                        local g = guinchoPerto(carro)
+                        if g then alvo, acao, guinchoAlvo = carro, 'carregar', g end
+                    end
+                end
+            end
+            if alvo and DoesEntityExist(alvo) then
+                espera = 0
+                local c = GetEntityCoords(alvo)
+                texto3D(vec3(c.x, c.y, c.z + 1.2), acao == 'carregar' and '[E] Colocar no guincho' or '[E] Descarregar o carro')
+                if IsControlJustReleased(0, 38) then
+                    if not souMecanico() then
+                        avisar('Só mecânico em serviço pode usar o guincho (use /servico)', 'error')
+                    elseif acao == 'carregar' then
+                        executar(carregar, guinchoAlvo, alvo)
+                    else
+                        executar(descarregar, guinchoAlvo)
+                    end
+                end
+            end
+        end
+        Wait(espera)
+    end
+end)
