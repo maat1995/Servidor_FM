@@ -68,7 +68,7 @@ function CalcularRemap(remap, dados)
     local t, i, l, m = remap.turbo or 0.0, remap.ignicao or 0, remap.limitador or 7000, remap.mistura or 12.5
 
     local pistao = TipoPistao(dados)
-    local m = Config.montagem
+    local cfgM = Config.montagem
 
     -- Pressão do turbo
     r.forca = r.forca + t * 0.10
@@ -77,8 +77,8 @@ function CalcularRemap(remap, dados)
     if dados.intercooler then riscoTurbo = riscoTurbo * 0.5 end
     if pistao == 'forjado' then riscoTurbo = riscoTurbo * 0.5 end
     if pistao == 'taxado' then riscoTurbo = riscoTurbo * 2.5 end -- batida de pino
-    if t > m.juntaLimiteBar and not dados.junta then
-        riscoTurbo = riscoTurbo + (t - m.juntaLimiteBar) * 60.0 -- junta queimando
+    if t > cfgM.juntaLimiteBar and not dados.junta then
+        riscoTurbo = riscoTurbo + (t - cfgM.juntaLimiteBar) * 60.0 -- junta queimando
     end
 
     -- Avanço de ignição
