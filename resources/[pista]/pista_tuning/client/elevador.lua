@@ -33,10 +33,16 @@ local function controle(ent)
     return NetworkHasControlOfEntity(ent)
 end
 
+--- Mecânico em serviço ou quem tem Freios / Suspensão regulável (pista_skills)
 local function souMecanico()
     local job = QBX and QBX.PlayerData and QBX.PlayerData.job
-    if not job or job.name ~= Config.elevador.job then return false end
-    return job.onduty or not Config.elevador.precisaEstarEmServico
+    if job and job.name == Config.elevador.job and (job.onduty or not Config.elevador.precisaEstarEmServico) then
+        return true
+    end
+    for _, h in ipairs(Config.elevador.habilidades or {}) do
+        if Pode(h) then return true end
+    end
+    return false
 end
 
 local function estadoElev(veh) return Entity(veh).state[STATE_ELEV] end

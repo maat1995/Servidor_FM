@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Habilidades</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="skills" class="oculto">
+        <div class="janela" id="janela">
+            <header class="topo">
+                <div class="marca">
+                    <span class="logo">PA</span>
+                    <div>
+                        <h1>Habilidades</h1>
+                        <small id="nome">Pista &amp; Asfalto RP</small>
+                    </div>
+                </div>
+                <nav class="abas" id="abas"></nav>
+                <button class="fechar" id="fechar" title="Fechar (Esc)"></button>
+            </header>
+
+            <div class="corpo">
+                <!-- Coluna da esquerda: nível, XP e pontos -->
+                <aside class="lateral">
+                    <div class="anel">
+                        <svg viewBox="0 0 120 120">
+                            <circle class="anel-fundo" cx="60" cy="60" r="52"></circle>
+                            <circle class="anel-xp" id="anelXP" cx="60" cy="60" r="52"></circle>
+                        </svg>
+                        <div class="anel-texto">
+                            <small>NÍVEL</small>
+                            <strong id="nivel">1</strong>
+                            <span id="nivelMax">de 10</span>
+                        </div>
+                    </div>
+                    <div class="arvore-nome" id="arvoreNome">Mecânica</div>
+                    <div class="xp-linha">
+                        <span id="xpTexto">0 / 500 XP</span>
+                        <span id="xpFalta">faltam 500</span>
+                    </div>
+                    <div class="barra"><div id="barraXP"></div></div>
+
+                    <div class="cartao pontos" id="cartaoPontos">
+                        <div class="pontos-num" id="pontos">0</div>
+                        <div>
+                            <strong id="pontosLabel">pontos livres</strong>
+                            <small id="pontosTotal">0 ganhos no total</small>
+                        </div>
+                    </div>
+
+                    <div class="cartao hoje">
+                        <div class="xp-linha"><span>XP hoje</span><span id="hojeTexto">0 / 1500</span></div>
+                        <div class="barra fina"><div id="barraHoje"></div></div>
+                    </div>
+
+                    <div class="cartao profissional oculto" id="profissional"></div>
+
+                    <h3 class="sub">Como ganhar XP</h3>
+                    <ul class="fontes" id="fontes"></ul>
+                </aside>
+
+                <!-- Árvore -->
+                <section class="arvore">
+                    <div class="regua" id="regua"></div>
+                    <div class="mapa" id="mapa">
+                        <svg class="ligacoes" id="ligacoes"></svg>
+                        <div class="voce" id="voce"><span>VOCÊ</span></div>
+                    </div>
+                </section>
+
+                <!-- Detalhe da habilidade escolhida -->
+                <aside class="detalhe" id="detalhe">
+                    <div class="vazio" id="detalheVazio">
+                        <div class="vazio-icone" data-icone="ferramentas"></div>
+                        <p>Clique numa habilidade para ver o que ela libera.</p>
+                    </div>
+                    <div class="conteudo oculto" id="detalheConteudo">
+                        <div class="det-topo">
+                            <div class="det-icone" id="detIcone"></div>
+                            <div>
+                                <small id="detRamo">Motor</small>
+                                <h2 id="detNome">Turbo</h2>
+                            </div>
+                        </div>
+                        <div class="det-tags">
+                            <span class="tag" id="detNivel">Nível 4</span>
+                            <span class="tag" id="detCusto">1 ponto</span>
+                        </div>
+                        <p class="det-desc" id="detDesc"></p>
+                        <h4>Requisitos</h4>
+                        <ul class="reqs" id="detReqs"></ul>
+                        <div class="det-status" id="detStatus"></div>
+                        <button class="aprender" id="aprender">Aprender</button>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="aviso oculto" id="aviso"></div>
+            <div class="subiu oculto" id="subiu">
+                <small>SUBIU DE NÍVEL</small>
+                <strong id="subiuNivel">5</strong>
+                <span id="subiuTexto">+2 pontos de habilidade</span>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

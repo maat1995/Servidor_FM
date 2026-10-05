@@ -142,6 +142,7 @@ function AbrirSuspensao(veh)
         padrao = NormalizarSusp(Config.suspensao.padrao),
         presets = Config.suspensao.presets,
         atual = info.susp,
+        soPresets = info.soPresets,
     })
     SetNuiFocus(true, true)
 end

@@ -111,8 +111,13 @@
             i.value = dados.atual[el.dataset.campo];
             i.oninput = () => { pintar(el); atualizar(); espiar(el, 900); };
             i.onpointerdown = () => espiar(el);
+            i.disabled = !!dados.soPresets;
             pintar(el);
         });
+        // Sem a habilidade "Ajuste fino" (pista_skills): só os presets
+        tela.classList.toggle('so-presets', !!dados.soPresets);
+        tela.querySelector('.presets .rot').textContent = dados.soPresets
+            ? 'Presets (aprenda Ajuste fino no /skills para regular à mão)' : 'Presets';
         tela.classList.remove('oculto');
         atualizar();
     }

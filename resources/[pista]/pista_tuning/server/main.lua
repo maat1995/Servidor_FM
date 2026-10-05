@@ -68,59 +68,54 @@ end
 ---------------------------------------------------------------------
 -- Skill / permissão
 ---------------------------------------------------------------------
-local function nivelPorXP(xp)
-    local nivel = 0
-    for n = 1, #Config.niveisXP do
-        if xp >= Config.niveisXP[n] then nivel = n end
-    end
-    return nivel
+-- XP, níveis e habilidades ficam no pista_skills. Aqui só perguntamos para ele.
+local ARVORE = 'mecanica'
+
+local function ehEspecialista(source)
+    return exports.pista_skills:ehProfissional(source, ARVORE)
 end
 
-local function xpDo(player)
-    return tonumber(player.PlayerData.metadata.tuning_xp) or 0
+local function exigirHab(source, id)
+    if not id then return nil end
+    return exports.pista_skills:exigirHabilidade(source, id, ARVORE)
 end
 
---- Nível efetivo: o maior entre a skill e o cargo de mecânico especializado.
+local function temHab(source, id)
+    return exports.pista_skills:temHabilidade(source, id, ARVORE)
+end
+
+--- Compatibilidade (qbx_customs e cliente): 0 = não mexe em desempenho
 local function nivelEfetivo(source)
-    local player = exports.qbx_core:GetPlayer(source)
-    if not player then return 0 end
-
-    local nivel = nivelPorXP(xpDo(player))
-    local job = player.PlayerData.job
-    local cfg = Config.mecanico
-
-    if job and job.name == cfg.job and (job.onduty or not cfg.precisaEstarEmServico) then
-        local grade = job.grade and job.grade.level or 0
-        if grade >= cfg.gradeMinimo then
-            nivel = math.max(nivel, grade)
-        end
-    end
-
-    return nivel
+    if ehEspecialista(source) then return 10 end
+    if not temHab(source, 'fundamentos') then return 0 end
+    return exports.pista_skills:nivel(source, ARVORE)
 end
 exports('nivelEfetivo', nivelEfetivo)
 
-local function exigirNivel(source, minimo)
-    local nivel = nivelEfetivo(source)
-    if nivel < (minimo or 1) then
-        return ('Você precisa de nível %d em preparação (seu nível: %d)'):format(minimo or 1, nivel)
-    end
+--- opts: chave / cooldown (anti-farm, ver pista_skills). Aprendizes por perto ganham junto.
+local function darXP(source, quantidade, motivo, opts)
+    if not quantidade or quantidade <= 0 then return end
+    opts = opts or {}
+    opts.aprendizes = true
+    exports.pista_skills:darXP(source, ARVORE, quantidade, motivo, opts)
 end
 
-local function darXP(source, quantidade)
-    local player = exports.qbx_core:GetPlayer(source)
-    if not player or not quantidade or quantidade <= 0 then return end
-    local antes = xpDo(player)
-    local depois = antes + quantidade
-    player.Functions.SetMetaData('tuning_xp', depois)
+--- XP de peça: só carro de alguém (garagem) e só a primeira vez daquela peça naquele carro
+local function xpPeca(source, plate, item, quantidade, label)
+    if not plate or not carroTemDono(plate) then return end
+    darXP(source, quantidade, label, { chave = ('peca:%s:%s'):format(plate, item) })
+end
 
-    local nAntes, nDepois = nivelPorXP(antes), nivelPorXP(depois)
-    if nDepois > nAntes then
-        exports.qbx_core:Notify(source, ('Sua skill de preparação subiu para o nível %d!'):format(nDepois), 'success', 7000)
-    else
-        exports.qbx_core:Notify(source, ('+%d XP de preparação'):format(quantidade), 'inform')
-    end
-    TriggerClientEvent('pista_tuning:client:atualizarNivel', source)
+--- Sorteia falha na instalação (mecânico especializado nunca erra)
+local function falhou(source)
+    if ehEspecialista(source) then return false end
+    local chance = Config.falha.chance * exports.pista_skills:modificador(source, 'falha', ARVORE)
+    return math.random() < chance
+end
+
+local function xpFalha(source, plate, item, xpCheio)
+    darXP(source, math.floor((xpCheio or 0) * Config.falha.xpPorcentagem), 'falha',
+        { cooldown = { chave = ('falha:%s:%s'):format(plate or '?', item), segundos = 600 } })
 end
 
 ---------------------------------------------------------------------
@@ -145,7 +140,8 @@ local function gastarFerramenta(source, chave, tipo)
     local slot, f = slotFerramenta(source, chave)
     if not slot then return end
     local atual = (slot.metadata and slot.metadata.durability) or 100
-    local nova = atual - (f.desgaste[tipo] or 0)
+    local mult = exports.pista_skills:modificador(source, 'desgaste', ARVORE)
+    local nova = atual - (f.desgaste[tipo] or 0) * mult
     if nova <= 0 then
         exports.ox_inventory:RemoveItem(source, f.item, 1, nil, slot.slot)
         exports.qbx_core:Notify(source, ('%s quebrou!'):format(f.label), 'error', 6000)
@@ -309,7 +305,7 @@ local function validarPecaExterna(source, netId, itemName)
     if Config.pecasExternasSoNaOficina and not naOficina(GetEntityCoords(veh)) then
         return nil, 'Isso só pode ser feito dentro da oficina'
     end
-    err = exigirNivel(source, peca.nivel)
+    err = exigirHab(source, peca.habilidade)
     if err then return nil, err end
     if exports.ox_inventory:Search(source, 'count', itemName) < 1 then
         return nil, ('Você não tem %s'):format(peca.label)
@@ -334,13 +330,21 @@ lib.callback.register('pista_tuning:server:instalar', function(source, netId, it
     local veh, err, peca, dados = validarPecaExterna(source, netId, itemName)
     if not veh then return false, err end
 
+    if falhou(source) then
+        if peca.slot ~= 'chip' then
+            for _ = 1, 1 + (Config.falha.desgasteExtra or 0) do gastarFerramenta(source, 'soquetes', 'peca') end
+        end
+        xpFalha(source, placaDo(veh), itemName, peca.xp)
+        return false, ('A instalação do %s deu errado! A peça não foi gasta, tente de novo.'):format(peca.label)
+    end
+
     if not exports.ox_inventory:RemoveItem(source, itemName, 1) then
         return false, 'Não foi possível usar a peça'
     end
     colocarPeca(source, dados, itemName, peca)
     aplicarDados(veh, dados)
     if peca.slot ~= 'chip' then gastarFerramenta(source, 'soquetes', 'peca') end
-    darXP(source, peca.xp)
+    xpPeca(source, placaDo(veh), itemName, peca.xp, peca.label)
 
     return true, ('%s instalado com sucesso'):format(peca.label)
 end)
@@ -349,7 +353,7 @@ lib.callback.register('pista_tuning:server:remover', function(source, netId, slo
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return false, err end
     if slotEhDoMotor(slot) then return false, 'Essa peça é do motor: tire o motor e abra ele' end
-    err = exigirNivel(source, 1)
+    err = exigirHab(source, 'fundamentos')
     if err then return false, err end
     if slot ~= 'chip' then
         err = exigirFerramenta(source, 'soquetes')
@@ -399,7 +403,7 @@ local function criarGuincho(indice)
 end
 
 local function exigirMecanico(source)
-    return exigirNivel(source, Config.motor.nivel)
+    return exigirHab(source, Config.motor.habilidade)
 end
 
 lib.callback.register('pista_tuning:server:pegarGuincho', function(source, netId)
@@ -515,7 +519,7 @@ lib.callback.register('pista_tuning:server:retirarMotor', function(source, netId
     dados.motor = m
     aplicarDados(veh, dados)
     gastarFerramenta(source, 'soquetes', 'motor')
-    darXP(source, Config.motor.xpRetirar)
+    darXP(source, Config.motor.xpRetirar, 'motor', { cooldown = { chave = 'motor:' .. plate, segundos = 1800 } })
     return true, 'Motor retirado. Leve até a bancada.', NetworkGetNetworkIdFromEntity(motor)
 end)
 
@@ -656,8 +660,16 @@ lib.callback.register('pista_tuning:server:instalarNoMotor', function(source, ne
 
     local obj, err, st, dados = validarMotorAberto(source, netId, true)
     if not obj then return false, err end
-    err = exigirNivel(source, peca.nivel) or checarRequisitos(peca, dados)
+    err = exigirHab(source, peca.habilidade) or checarRequisitos(peca, dados)
     if err then return false, err end
+    if exports.ox_inventory:Search(source, 'count', itemName) < 1 then
+        return false, ('Você não tem %s'):format(peca.label)
+    end
+    if falhou(source) then
+        for _ = 1, 1 + (Config.falha.desgasteExtra or 0) do gastarFerramenta(source, 'torquimetro', 'peca') end
+        xpFalha(source, st.plate, itemName, peca.xp)
+        return false, ('A montagem do %s deu errado! A peça não foi gasta, tente de novo.'):format(peca.label)
+    end
     if not exports.ox_inventory:RemoveItem(source, itemName, 1) then
         return false, ('Você não tem %s'):format(peca.label)
     end
@@ -665,7 +677,7 @@ lib.callback.register('pista_tuning:server:instalarNoMotor', function(source, ne
     colocarPeca(source, dados, itemName, peca)
     salvar(st.plate, dados)
     gastarFerramenta(source, 'torquimetro', 'peca')
-    darXP(source, peca.xp)
+    xpPeca(source, st.plate, itemName, peca.xp, peca.label)
     return true, ('%s instalado no motor'):format(peca.label)
 end)
 
@@ -733,8 +745,7 @@ end)
 -- Leitura / nível
 ---------------------------------------------------------------------
 lib.callback.register('pista_tuning:server:meuNivel', function(source)
-    local player = exports.qbx_core:GetPlayer(source)
-    return nivelEfetivo(source), player and xpDo(player) or 0
+    return nivelEfetivo(source)
 end)
 
 lib.callback.register('pista_tuning:server:carregar', function(source, netId)
@@ -783,7 +794,7 @@ end)
 local function validarRemap(source, netId)
     local veh, err = pegarVeiculo(source, netId, true)
     if not veh then return nil, err end
-    err = exigirNivel(source, Config.remap.nivel)
+    err = exigirHab(source, Config.remap.habilidade)
     if err then return nil, err end
     if exports.ox_inventory:Search(source, 'count', Config.remap.item) < 1 then
         return nil, 'Você precisa do notebook de remap'
@@ -809,7 +820,7 @@ lib.callback.register('pista_tuning:server:gravarRemap', function(source, netId,
 
     dados.remap = NormalizarRemap(valores, dados)
     aplicarDados(veh, dados)
-    darXP(source, Config.remap.xp)
+    darXP(source, Config.remap.xp, 'remap', { cooldown = { chave = 'remap:' .. placaDo(veh), segundos = 900 } })
 
     local risco = CalcularRemap(dados.remap, dados).risco
     return true, ('Mapa gravado na ECU (risco ao motor: %d%%)'):format(math.floor(risco))
@@ -818,39 +829,7 @@ end)
 ---------------------------------------------------------------------
 -- Comandos
 ---------------------------------------------------------------------
-lib.addCommand('minhaskill', {
-    help = 'Ver seu nível de preparação',
-}, function(source)
-    local player = exports.qbx_core:GetPlayer(source)
-    if not player then return end
-    local xp = xpDo(player)
-    local nivel = nivelPorXP(xp)
-    local prox = Config.niveisXP[nivel + 1]
-    local texto = prox and ('Skill de preparação: nível %d (%d/%d XP)'):format(nivel, xp, prox)
-        or ('Skill de preparação: nível %d (máximo, %d XP)'):format(nivel, xp)
-    local efetivo = nivelEfetivo(source)
-    if efetivo > nivel then texto = texto .. (' | Como mecânico: nível %d'):format(efetivo) end
-    exports.qbx_core:Notify(source, texto, 'inform', 8000)
-end)
-
-lib.addCommand('setskill', {
-    help = 'Definir nível de preparação de um jogador',
-    params = {
-        { name = 'id', type = 'playerId', help = 'ID do jogador' },
-        { name = 'nivel', type = 'number', help = 'Nível (0 a 4)' },
-    },
-    restricted = 'group.admin',
-}, function(source, args)
-    local alvo = exports.qbx_core:GetPlayer(args.id)
-    if not alvo then return end
-    local nivel = math.max(0, math.min(math.floor(args.nivel), #Config.niveisXP))
-    alvo.Functions.SetMetaData('tuning_xp', nivel == 0 and 0 or Config.niveisXP[nivel])
-    TriggerClientEvent('pista_tuning:client:atualizarNivel', args.id)
-    exports.qbx_core:Notify(args.id, ('Sua skill de preparação agora é nível %d'):format(nivel), 'success')
-    if source > 0 then
-        exports.qbx_core:Notify(source, ('Skill do ID %d definida para nível %d'):format(args.id, nivel), 'success')
-    end
-end)
+-- /minhaskill e /setskill agora ficam no pista_skills
 
 lib.addCommand('pegarcoords', {
     help = 'Mostra e copia a sua posição (para configurar a oficina)',
@@ -895,12 +874,20 @@ end)
 local STATE_ELEV = 'pista_elevador'
 local STATE_RODAS = 'pista_rodas'
 
-local function exigirMecanicoElevador(source)
+local function mecanicoNoElevador(source)
     local player = exports.qbx_core:GetPlayer(source)
     local job = player and player.PlayerData.job
     local cfg = Config.elevador
-    if not job or job.name ~= cfg.job then return 'Só mecânico pode usar o elevador' end
-    if cfg.precisaEstarEmServico and not job.onduty then return 'Entre em serviço primeiro' end
+    return job ~= nil and job.name == cfg.job and (job.onduty or not cfg.precisaEstarEmServico)
+end
+
+--- Mecânico (qualquer cargo, em serviço) ou quem tem Freios / Suspensão regulável
+local function exigirMecanicoElevador(source)
+    if mecanicoNoElevador(source) then return nil end
+    for _, h in ipairs(Config.elevador.habilidades or {}) do
+        if temHab(source, h) then return nil end
+    end
+    return 'Para usar o elevador: seja mecânico em serviço ou aprenda Freios no /skills'
 end
 
 local function carroComGente(veh)
@@ -1041,6 +1028,10 @@ lib.callback.register('pista_tuning:server:instalarNaRoda', function(source, net
     if not kit then return false, 'Esse item não vai na roda' end
     local veh, err = validarNoAlto(source, netId)
     if not veh then return false, err end
+    if not mecanicoNoElevador(source) then
+        err = exigirHab(source, tipo == 'freio' and 'freios' or 'suspensao')
+        if err then return false, err end
+    end
     roda = rodaValida(roda)
     if not roda then return false, 'Roda inválida' end
     if not (Entity(veh).state[STATE_RODAS] or {})['r' .. roda] then return false, 'Tire a roda primeiro' end
@@ -1079,10 +1070,11 @@ lib.callback.register('pista_tuning:server:instalarNaRoda', function(source, net
                 local itemAntigo = itemDoKit(Config.kitsFreio, antigo)
                 if itemAntigo then exports.ox_inventory:AddItem(source, itemAntigo, 1) end
             end
+            xpPeca(source, placaDo(veh), obra.item, Config.elevador.xpFreio, kit.label)
         else
             dados.suspensao = true
             dados.susp = NormalizarSusp(dados.susp or Config.suspensao.padrao)
-            darXP(source, Config.suspensao.xp)
+            xpPeca(source, placaDo(veh), Config.suspensao.item, Config.suspensao.xp, Config.suspensao.label)
         end
         msg = tipo == 'susp' and 'Suspensão regulável instalada nas 4 rodas! Use /suspensao para regular.'
             or ('%s instalado nas 4 rodas!'):format(kit.label)
@@ -1113,7 +1105,7 @@ local function validarCambio(source, netId, itemName)
         return nil, 'Isso só pode ser feito dentro da oficina'
     end
     if not ehMecanico(source, true) then
-        err = exigirNivel(source, Config.cambio.nivel)
+        err = exigirHab(source, Config.cambio.habilidade)
         if err then return nil, err end
     end
     if exports.ox_inventory:Search(source, 'count', itemName) < 1 then
@@ -1135,6 +1127,11 @@ end)
 lib.callback.register('pista_tuning:server:instalarCambio', function(source, netId, itemName)
     local veh, err, kit, dados = validarCambio(source, netId, itemName)
     if not veh then return false, err end
+    if falhou(source) then
+        for _ = 1, 1 + (Config.falha.desgasteExtra or 0) do gastarFerramenta(source, 'soquetes', 'peca') end
+        xpFalha(source, placaDo(veh), itemName, Config.cambio.xp)
+        return false, ('A troca da %s deu errado! A peça não foi gasta, tente de novo.'):format(kit.label:lower())
+    end
     if not exports.ox_inventory:RemoveItem(source, itemName, 1) then
         return false, ('Você não tem %s'):format(kit.label)
     end
@@ -1146,7 +1143,7 @@ lib.callback.register('pista_tuning:server:instalarCambio', function(source, net
     dados.cambio = kit.nivel
     aplicarDados(veh, dados)
     gastarFerramenta(source, 'soquetes', 'peca')
-    darXP(source, Config.cambio.xp)
+    xpPeca(source, placaDo(veh), itemName, Config.cambio.xp, kit.label)
     return true, ('%s instalada'):format(kit.label)
 end)
 
@@ -1171,15 +1168,42 @@ local function validarSusp(source, netId)
     return veh, nil, dados
 end
 
+--- Sem a habilidade "Ajuste fino" (e sem ser mecânico em serviço) só dá para escolher os presets
+local function soPresets(source)
+    return not ehMecanico(source, Config.suspensao.mecanicoPrecisaServico) and not temHab(source, 'suspensao_ajuste')
+end
+
+local function ehPreset(valores)
+    local v = NormalizarSusp(valores)
+    local candidatos = { NormalizarSusp(Config.suspensao.padrao) }
+    for _, p in pairs(Config.suspensao.presets) do
+        local c = {}
+        for k, val in pairs(Config.suspensao.padrao) do c[k] = val end
+        for k, val in pairs(p) do c[k] = val end
+        candidatos[#candidatos + 1] = NormalizarSusp(c)
+    end
+    for _, c in ipairs(candidatos) do
+        local igual = true
+        for k, val in pairs(c) do
+            if type(val) == 'number' and math.abs((tonumber(v[k]) or 0) - val) > 0.001 then igual = false break end
+        end
+        if igual then return true end
+    end
+    return false
+end
+
 lib.callback.register('pista_tuning:server:abrirSusp', function(source, netId)
     local veh, err, dados = validarSusp(source, netId)
     if not veh then return false, err end
-    return true, { susp = NormalizarSusp(dados.susp), placa = placaDo(veh) }
+    return true, { susp = NormalizarSusp(dados.susp), placa = placaDo(veh), soPresets = soPresets(source) }
 end)
 
 lib.callback.register('pista_tuning:server:salvarSusp', function(source, netId, valores)
     local veh, err, dados = validarSusp(source, netId)
     if not veh then return false, err end
+    if soPresets(source) and not ehPreset(valores) then
+        return false, 'Sem a habilidade "Ajuste fino" você só pode usar os presets'
+    end
     dados.susp = NormalizarSusp(valores)
     aplicarDados(veh, dados)
     return true, 'Suspensão regulada'
@@ -1454,6 +1478,11 @@ lib.callback.register('pista_tuning:server:reparar', function(source, netId, tip
         return false, 'Não foi possível usar o item'
     end
     if tipo == 'pneu' then gastarFerramenta(source, 'macaco', 'pneu') end
+    if cfg.xp and (temHab(source, 'fundamentos') or ehMecanico(source, true)) then
+        darXP(source, cfg.xp, 'conserto', {
+            cooldown = { chave = ('reparo:%s:%s'):format(tipo, placaDo(veh)), segundos = (Config.reparoCooldownXP or 15) * 60 },
+        })
+    end
     return true
 end)
 
@@ -1469,7 +1498,7 @@ lib.callback.register('pista_tuning:server:retificarMotor', function(source, net
     dados.motorRetificado = true
     salvar(st.plate, dados)
     gastarFerramenta(source, 'torquimetro', 'peca')
-    darXP(source, cfg.xp)
+    darXP(source, cfg.xp, 'retífica', { cooldown = { chave = 'retifica:' .. st.plate, segundos = 3600 } })
     return true, 'Motor retificado! Ele volta novo quando for recolocado no carro.'
 end)
 

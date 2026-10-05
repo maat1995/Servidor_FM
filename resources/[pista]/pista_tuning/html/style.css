@@ -370,3 +370,7 @@ button.pri:hover { filter: brightness(1.1); }
     margin: -9px -11px 1px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
 }
+
+/* Sem a habilidade "Ajuste fino": controles travados, só presets */
+#suspensao.so-presets .s-ajuste { opacity: .45; }
+#suspensao.so-presets .s-ajuste input { cursor: not-allowed; }

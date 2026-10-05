@@ -677,6 +677,24 @@ return {
         description = 'Recarrega o nitro de um carro com kit instalado.',
         client = { export = 'pista_tuning.usarGarrafaNitro' },
     },
+    ['manual_motor'] = {
+        label = 'Manual técnico: Motor', weight = 400, stack = true, close = true,
+        description = 'Dá XP de mecânica uma única vez por personagem.',
+        consume = 0,
+        client = { export = 'pista_skills.usarManual' },
+    },
+    ['manual_chassi'] = {
+        label = 'Manual técnico: Chassi', weight = 400, stack = true, close = true,
+        description = 'Dá XP de mecânica uma única vez por personagem.',
+        consume = 0,
+        client = { export = 'pista_skills.usarManual' },
+    },
+    ['manual_eletronica'] = {
+        label = 'Manual técnico: Eletrônica', weight = 400, stack = true, close = true,
+        description = 'Dá XP de mecânica uma única vez por personagem.',
+        consume = 0,
+        client = { export = 'pista_skills.usarManual' },
+    },
     ['notebook_remap'] = {
         label = 'Notebook de remap', weight = 2500, stack = false, close = true,
         description = 'Conecta na ECU do carro no elevador para ajustar o mapa do chip.',

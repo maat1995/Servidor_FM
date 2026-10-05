@@ -222,7 +222,7 @@ local function executar(fn, ...)
 end
 
 local function podeMecanico()
-    return not cache.vehicle and MeuNivel() >= Config.motor.nivel
+    return not cache.vehicle and Pode(Config.motor.habilidade)
 end
 
 local function diferencaAngulo(a, b) return (b - a + 180.0) % 360.0 - 180.0 end
@@ -550,7 +550,7 @@ local function abrirMenuBancada(b)
                 if peca.motor and TemItem(nome) then
                     opcoes[#opcoes + 1] = {
                         title = ('Instalar %s'):format(peca.label),
-                        description = ('Nível %d'):format(peca.nivel),
+                        description = Pode(peca.habilidade) and 'Você sabe montar' or ('Precisa de %s'):format(NomeHabilidade(peca.habilidade)),
                         icon = 'fa-solid fa-screwdriver-wrench', iconColor = '#58a6ff',
                         onSelect = function() executar(instalarNoMotor, motor, nome) end,
                     }

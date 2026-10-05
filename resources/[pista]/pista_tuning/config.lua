@@ -3,21 +3,18 @@ Config = {}
 ---------------------------------------------------------------------
 -- QUEM PODE MEXER EM DESEMPENHO
 ---------------------------------------------------------------------
--- Mecânico especializado: emprego 'mechanic', em serviço, com cargo >= gradeMinimo.
--- O nível dele passa a ser o do cargo (cargo 3 = nível 3, cargo 4 = nível 4).
--- Quem não é mecânico precisa ter nível de skill (XP de preparação).
-Config.mecanico = {
-    job = 'mechanic',
-    gradeMinimo = 3,       -- 3 = Advanced na base do Qbox
-    precisaEstarEmServico = true,
-}
+-- Tudo de skill (XP, níveis, pontos e árvore) fica no pista_skills (/skills).
+-- Cada peça aqui diz qual HABILIDADE da árvore de Mecânica ela precisa.
+-- O mecânico especializado (emprego 'mechanic', cargo 3+, em serviço) sabe todas:
+-- isso é configurado em pista_skills/config.lua (profissao).
 
--- XP necessário para cada nível de skill de preparação
-Config.niveisXP = {
-    [1] = 100,
-    [2] = 300,
-    [3] = 700,
-    [4] = 1500,
+-- Falha na instalação (só para quem não é mecânico especializado).
+-- A peça não é gasta, a ferramenta desgasta e o jogador ganha uma parte do XP.
+-- A passiva "Precisão" corta a chance pela metade.
+Config.falha = {
+    chance = 0.12,          -- 12%
+    xpPorcentagem = 0.25,   -- 25% do XP da peça
+    desgasteExtra = 1,      -- gasta a ferramenta mais uma vez
 }
 
 ---------------------------------------------------------------------
@@ -59,16 +56,18 @@ Config.ferramentas = {
 -- Pneu e kit de emergência: qualquer pessoa. O resto: mecânico em serviço.
 -- Pneu e funilaria pelo Alt mirando no carro; os kits de motor pelo inventário.
 Config.reparo = {
-    pneu       = { item = 'pneu', tempo = 12000 },
+    pneu       = { item = 'pneu', tempo = 12000, xp = 10 },
     -- Funilaria: amassados, arranhões, vidros e porta/capô/porta-malas que faltam
-    funilaria  = { item = 'kit_funilaria', tempo = 30000 },
+    funilaria  = { item = 'kit_funilaria', tempo = 30000, xp = 20 },
     -- Kit de emergência: o motor volta a ligar com pouca vida, só para chegar na oficina
-    emergencia = { item = 'repairkit', tempo = 15000, vidaMotor = 350.0 },
+    emergencia = { item = 'repairkit', tempo = 15000, vidaMotor = 350.0, xp = 10 },
     -- Kit avançado (mecânico): motor até a metade
-    avancado   = { item = 'advancedrepairkit', tempo = 20000, vidaMotor = 650.0 },
+    avancado   = { item = 'advancedrepairkit', tempo = 20000, vidaMotor = 650.0, xp = 15 },
     -- Retífica: no motor aberto na bancada, deixa o motor novo (1000) ao recolocar
     retifica   = { item = 'kit_retifica', tempo = 30000, xp = 30 },
 }
+-- O mesmo conserto no mesmo carro só dá XP de novo depois desse tempo (minutos)
+Config.reparoCooldownXP = 15
 
 ---------------------------------------------------------------------
 -- EMPURRAR O CARRO (motor desligado ou fundido, sem ninguém no volante)
@@ -85,7 +84,7 @@ Config.empurrar = {
 ---------------------------------------------------------------------
 -- Use /pegarcoords (admin) em cada ponto e cole o resultado aqui.
 Config.motor = {
-    nivel = 2,                           -- nível para mexer com guincho/motor
+    habilidade = 'motor_bancada',        -- habilidade para tirar/abrir o motor
     propGuincho = `prop_engine_hoist`,
     propMotor = `prop_car_engine_01`,
 
@@ -158,6 +157,9 @@ Config.elevadores = {
 Config.elevador = {
     job = 'mechanic',           -- qualquer cargo desse emprego pode usar (sem skill)
     precisaEstarEmServico = true,
+    -- Quem não é mecânico usa com a habilidade de Freios ou de Suspensão regulável
+    habilidades = { 'freios', 'suspensao' },
+    xpFreio = 20,               -- XP ao terminar o kit de freio nas 4 rodas
     altura = 1.6,               -- quanto o carro sobe (metros)
     tempoSubir = 6000,
     tempoDescer = 6000,
@@ -184,8 +186,8 @@ Config.kitsCambio = {
 Config.cambio = {
     tempo = 20000,   -- ms para trocar a transmissão
     xp = 20,
-    -- Quem pode trocar: mecânico (qualquer cargo, em serviço) ou quem tem skill >= nivel
-    nivel = 1,
+    -- Quem pode trocar: mecânico (qualquer cargo, em serviço) ou quem tem a habilidade
+    habilidade = 'cambio',
 }
 
 ---------------------------------------------------------------------
@@ -238,59 +240,59 @@ Config.suspensao = {
 ---------------------------------------------------------------------
 -- slot     = onde a peça fica no carro (uma peça por slot)
 -- valor    = o que é gravado no slot (o chip guarda o stage)
--- nivel    = nível mínimo (skill ou cargo) para instalar
+-- habilidade = habilidade da árvore de Mecânica (pista_skills) para instalar
 -- requer   = slots que precisam estar instalados antes
 -- tempo    = duração da instalação em ms
--- xp       = XP ganho ao instalar
+-- xp       = XP ganho ao instalar (só a primeira vez daquela peça naquele carro)
 Config.itens = {
     peca_turbo = {
         label = 'Turbo', slot = 'turbo', valor = true,
-        nivel = 1, tempo = 15000, xp = 20,
+        habilidade = 'turbo', tempo = 15000, xp = 20,
     },
     peca_intercooler = {
         label = 'Intercooler', slot = 'intercooler', valor = true,
-        nivel = 1, tempo = 12000, xp = 15,
+        habilidade = 'intercooler', tempo = 12000, xp = 15,
     },
     -- Peças internas (motor = true): só com o motor fora, na bancada e aberto
     peca_pistao_taxado = {
         label = 'Pistão taxado', slot = 'pistao', valor = 'taxado', motor = true,
-        nivel = 2, tempo = 25000, xp = 40,
+        habilidade = 'motor_bancada', tempo = 25000, xp = 40,
     },
     peca_pistao_forjado = {
         label = 'Pistão forjado', slot = 'pistao', valor = 'forjado', motor = true,
-        nivel = 2, tempo = 25000, xp = 40,
+        habilidade = 'motor_forjado', tempo = 25000, xp = 40,
     },
     cabecote_retrabalhado = {
         label = 'Cabeçote retrabalhado', slot = 'cabecote', valor = 1, motor = true,
-        nivel = 2, tempo = 20000, xp = 35,
+        habilidade = 'motor_bancada', tempo = 20000, xp = 35,
     },
     cabecote_competicao = {
         label = 'Cabeçote de corrida', slot = 'cabecote', valor = 2, motor = true,
-        nivel = 3, tempo = 25000, xp = 60,
+        habilidade = 'motor_forjado', tempo = 25000, xp = 60,
     },
     junta_reforcada = {
         label = 'Junta de cabeçote reforçada', slot = 'junta', valor = true, motor = true,
-        nivel = 2, tempo = 15000, xp = 25,
+        habilidade = 'motor_bancada', tempo = 15000, xp = 25,
     },
     bielas_forjadas = {
         label = 'Bielas forjadas', slot = 'bielas', valor = true, motor = true,
-        nivel = 3, tempo = 25000, xp = 50,
+        habilidade = 'motor_forjado', tempo = 25000, xp = 50,
     },
     chip_stage1 = {
         label = 'Chip Stage 1', slot = 'chip', valor = 1,
-        nivel = 1, tempo = 8000, xp = 15,
+        habilidade = 'chip1', tempo = 8000, xp = 15,
     },
     chip_stage2 = {
         label = 'Chip Stage 2', slot = 'chip', valor = 2,
-        nivel = 2, tempo = 10000, xp = 30, requer = { 'turbo' },
+        habilidade = 'remap', tempo = 10000, xp = 30, requer = { 'turbo' },
     },
     chip_stage3 = {
         label = 'Chip Stage 3', slot = 'chip', valor = 3,
-        nivel = 3, tempo = 12000, xp = 50, requer = { 'turbo' },
+        habilidade = 'remap', tempo = 12000, xp = 50, requer = { 'turbo' },
     },
     kit_nitro = {
         label = 'Kit de nitro', slot = 'nitro', valor = true,
-        nivel = 2, tempo = 20000, xp = 35,
+        habilidade = 'nitro', tempo = 20000, xp = 35,
     },
 }
 
@@ -388,7 +390,7 @@ Config.risco = {
 -- ou do lado dele. Só funciona em carro com chip. O stage do chip define os limites.
 Config.remap = {
     item = 'notebook_remap',
-    nivel = 1,              -- nível mínimo para abrir o notebook
+    habilidade = 'chip1',   -- habilidade para abrir o notebook
     tempoGravar = 10000,    -- ms para gravar o mapa na ECU
     xp = 10,
     danoMaximo = 12.0,      -- dano no motor a cada intervalo de risco com 100% de risco

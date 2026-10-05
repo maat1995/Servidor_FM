@@ -115,6 +115,10 @@ return {
 			{ name = 'pneu', price = 1 },
 			{ name = 'macaco', price = 1 },
 			{ name = 'repairkit', price = 1 },
+			-- Pista & Asfalto: manuais técnicos (XP de mecânica, uma vez cada)
+			{ name = 'manual_motor', price = 1 },
+			{ name = 'manual_chassi', price = 1 },
+			{ name = 'manual_eletronica', price = 1 },
 		}, locations = {
 			vec3(2748.0, 3473.0, 55.67),
 			vec3(342.99, -1298.26, 32.51)

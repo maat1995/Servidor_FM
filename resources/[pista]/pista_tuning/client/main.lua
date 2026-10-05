@@ -11,6 +11,7 @@ local function atualizarNivel()
 end
 
 RegisterNetEvent('pista_tuning:client:atualizarNivel', atualizarNivel)
+RegisterNetEvent('pista_skills:client:estado', function() SetTimeout(200, atualizarNivel) end)
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', atualizarNivel)
 RegisterNetEvent('QBCore:Client:OnJobUpdate', function() SetTimeout(500, atualizarNivel) end)
 RegisterNetEvent('QBCore:Client:SetDuty', function() SetTimeout(500, atualizarNivel) end)
@@ -20,6 +21,20 @@ end)
 
 function MeuNivel() return meuNivel end
 exports('nivelLocal', function() return meuNivel end)
+
+--- Habilidade da árvore de Mecânica (pista_skills). O mecânico especializado tem todas.
+function Pode(id)
+    if not id then return true end
+    if GetResourceState('pista_skills') ~= 'started' then return false end
+    return exports.pista_skills:tem(id, 'mecanica')
+end
+
+--- Nome e nível da habilidade (para mostrar nos menus)
+function NomeHabilidade(id)
+    if not id or GetResourceState('pista_skills') ~= 'started' then return tostring(id) end
+    local label, nivel = exports.pista_skills:label(id, 'mecanica')
+    return ('%s (nível %d)'):format(label, nivel)
+end
 
 ---------------------------------------------------------------------
 -- Utilidades compartilhadas entre os arquivos do cliente
@@ -55,6 +70,10 @@ end
 function Trabalhar(duracao, label, opts)
     opts = opts or {}
     if opts.capo then SetVehicleDoorOpen(opts.capo, 4, false, false) end
+    -- passiva "Agilidade" deixa o serviço mais rápido
+    if GetResourceState('pista_skills') == 'started' then
+        duracao = math.floor(duracao * exports.pista_skills:modificador('tempo', 'mecanica'))
+    end
     local ok = lib.progressCircle({
         duration = duracao,
         label = label,
@@ -427,7 +446,7 @@ CreateThread(function()
             label = 'Ver preparação',
             distance = 3.0,
             canInteract = function()
-                return meuNivel >= 1 and not cache.vehicle
+                return Pode('fundamentos') and not cache.vehicle
             end,
             onSelect = function(data)
                 abrirMenu(data.entity)
