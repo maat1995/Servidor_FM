@@ -73,12 +73,12 @@ Config.arvores = {
               desc = 'Instalar o kit de suspensão regulável no elevador.',
               nivel = 6, custo = 1, requer = { 'cambio' } },
             { id = 'suspensao_ajuste', ramo = 'chassi', label = 'Ajuste fino', icone = 'ajuste',
-              desc = 'Regular cada item da suspensão no painel. Sem ela, o dono só escolhe os presets (Rua, Pista, Drift, Stance).',
+              desc = 'Regular cada item da suspensão no painel. Sem ela, só os presets (Rua, Pista, Drift, Stance). No carro dos outros, só com a Licença de funcionamento.',
               nivel = 8, custo = 1, requer = { 'suspensao' } },
 
             -- Eletrônica
             { id = 'chip1', ramo = 'eletronica', label = 'Chip Stage 1', icone = 'chip',
-              desc = 'Instalar o Chip Stage 1 e usar o notebook de remap.',
+              desc = 'Instalar o Chip Stage 1 e usar o notebook de remap. No carro dos outros, só com a Licença de funcionamento.',
               nivel = 3, custo = 1, requer = { 'fundamentos' } },
             { id = 'nitro', ramo = 'eletronica', label = 'Nitro', icone = 'chama',
               desc = 'Instalar o kit de nitro.',

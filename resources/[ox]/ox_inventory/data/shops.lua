@@ -46,6 +46,19 @@ return {
 		}
 	},
 
+	-- Pista & Asfalto: licença de funcionamento (remap e suspensão em carro dos outros)
+	-- Ajuste o local com /pegarcoords se o seu cartório/prefeitura ficar em outro lugar
+	JuntaComercial = {
+		name = 'Junta Comercial',
+		blip = {
+			id = 498, colour = 5, scale = 0.7
+		}, inventory = {
+			{ name = 'licenca_funcionamento', price = 1 },
+		}, locations = {
+			vec3(-265.0, -963.6, 31.2),
+		}
+	},
+
 	General = {
 		name = 'Shop',
 		blip = {

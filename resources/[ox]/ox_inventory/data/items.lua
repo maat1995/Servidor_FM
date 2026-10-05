@@ -677,6 +677,10 @@ return {
         description = 'Recarrega o nitro de um carro com kit instalado.',
         client = { export = 'pista_tuning.usarGarrafaNitro' },
     },
+    ['licenca_funcionamento'] = {
+        label = 'Licença de funcionamento', weight = 50, stack = false, close = true,
+        description = 'Firma reconhecida: permite fazer remap e regular a suspensão no carro de outros jogadores.',
+    },
     ['manual_motor'] = {
         label = 'Manual técnico: Motor', weight = 400, stack = true, close = true,
         description = 'Dá XP de mecânica uma única vez por personagem.',

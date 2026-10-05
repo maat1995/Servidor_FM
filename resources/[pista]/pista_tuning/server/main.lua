@@ -119,6 +119,42 @@ local function xpFalha(source, plate, item, xpCheio)
 end
 
 ---------------------------------------------------------------------
+-- De quem é o carro
+---------------------------------------------------------------------
+-- Quem não é mecânico em serviço só prepara o PRÓPRIO carro.
+-- No carro dos outros só pode fazer remap e regular a suspensão, e só com a
+-- licença de funcionamento (Config.licenca) no inventário.
+local function mecanicoEmServico(source)
+    local player = exports.qbx_core:GetPlayer(source)
+    local job = player and player.PlayerData.job
+    return job ~= nil and job.name == Config.licenca.jobMecanico and job.onduty == true
+end
+
+local function donoDaPlaca(source, plate)
+    local player = exports.qbx_core:GetPlayer(source)
+    if not player or not plate then return false end
+    return MySQL.scalar.await('SELECT 1 FROM player_vehicles WHERE plate = ? AND citizenid = ?',
+        { plate, player.PlayerData.citizenid }) ~= nil
+end
+
+local function temLicenca(source)
+    return (exports.ox_inventory:Search(source, 'count', Config.licenca.item) or 0) > 0
+end
+
+--- Peças, motor, elevador e transmissão: mecânico em serviço ou dono do carro
+local function exigirCarroProprio(source, plate)
+    if mecanicoEmServico(source) or donoDaPlaca(source, plate) then return nil end
+    return 'Você só pode preparar o seu próprio carro. No dos outros, só um mecânico.'
+end
+
+--- Remap e regulagem de suspensão: mecânico em serviço, dono ou quem tem a licença
+local function exigirDonoOuLicenca(source, plate)
+    if mecanicoEmServico(source) or donoDaPlaca(source, plate) then return nil end
+    if temLicenca(source) then return nil end
+    return ('No carro dos outros você precisa da %s'):format(Config.licenca.label)
+end
+
+---------------------------------------------------------------------
 -- Ferramentas (durabilidade)
 ---------------------------------------------------------------------
 local function slotFerramenta(source, chave)
@@ -305,7 +341,7 @@ local function validarPecaExterna(source, netId, itemName)
     if Config.pecasExternasSoNaOficina and not naOficina(GetEntityCoords(veh)) then
         return nil, 'Isso só pode ser feito dentro da oficina'
     end
-    err = exigirHab(source, peca.habilidade)
+    err = exigirCarroProprio(source, placaDo(veh)) or exigirHab(source, peca.habilidade)
     if err then return nil, err end
     if exports.ox_inventory:Search(source, 'count', itemName) < 1 then
         return nil, ('Você não tem %s'):format(peca.label)
@@ -353,7 +389,7 @@ lib.callback.register('pista_tuning:server:remover', function(source, netId, slo
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return false, err end
     if slotEhDoMotor(slot) then return false, 'Essa peça é do motor: tire o motor e abra ele' end
-    err = exigirHab(source, 'fundamentos')
+    err = exigirHab(source, 'fundamentos') or exigirCarroProprio(source, placaDo(veh))
     if err then return false, err end
     if slot ~= 'chip' then
         err = exigirFerramenta(source, 'soquetes')
@@ -496,7 +532,7 @@ lib.callback.register('pista_tuning:server:retirarMotor', function(source, netId
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return false, err end
     if not naOficina(GetEntityCoords(veh)) then return false, 'Só dá para tirar o motor dentro da oficina' end
-    err = exigirMecanico(source) or exigirFerramenta(source, 'soquetes')
+    err = exigirMecanico(source) or exigirCarroProprio(source, placaDo(veh)) or exigirFerramenta(source, 'soquetes')
     if err then return false, err end
 
     local plate = placaDo(veh)
@@ -527,7 +563,7 @@ lib.callback.register('pista_tuning:server:recolocarMotor', function(source, net
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return false, err end
     if not naOficina(GetEntityCoords(veh)) then return false, 'Só dá para colocar o motor dentro da oficina' end
-    err = exigirMecanico(source) or exigirFerramenta(source, 'soquetes')
+    err = exigirMecanico(source) or exigirCarroProprio(source, placaDo(veh)) or exigirFerramenta(source, 'soquetes')
     if err then return false, err end
 
     local plate = placaDo(veh)
@@ -628,7 +664,7 @@ local function validarMotorAberto(source, netId, precisaAberto)
     if not obj then return nil, err end
     local st = estadoMotor(obj)
     if st['local'] ~= 'bancada' then return nil, 'Coloque o motor na bancada primeiro' end
-    err = exigirMecanico(source) or exigirFerramenta(source, 'torquimetro')
+    err = exigirMecanico(source) or exigirCarroProprio(source, st.plate) or exigirFerramenta(source, 'torquimetro')
     if err then return nil, err end
     if precisaAberto ~= nil and st.aberto ~= precisaAberto then
         return nil, precisaAberto and 'Abra o motor primeiro' or 'O motor já está aberto'
@@ -794,7 +830,7 @@ end)
 local function validarRemap(source, netId)
     local veh, err = pegarVeiculo(source, netId, true)
     if not veh then return nil, err end
-    err = exigirHab(source, Config.remap.habilidade)
+    err = exigirHab(source, Config.remap.habilidade) or exigirDonoOuLicenca(source, placaDo(veh))
     if err then return nil, err end
     if exports.ox_inventory:Search(source, 'count', Config.remap.item) < 1 then
         return nil, 'Você precisa do notebook de remap'
@@ -908,7 +944,7 @@ end
 local function validarNoAlto(source, netId)
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return nil, err end
-    err = exigirMecanicoElevador(source)
+    err = exigirMecanicoElevador(source) or exigirCarroProprio(source, placaDo(veh))
     if err then return nil, err end
     local st = Entity(veh).state[STATE_ELEV]
     if not st or not st.alto or st.descendo then return nil, 'O carro precisa estar no alto do elevador' end
@@ -928,7 +964,7 @@ end
 lib.callback.register('pista_tuning:server:subirElevador', function(source, netId)
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return false, err end
-    err = exigirMecanicoElevador(source)
+    err = exigirMecanicoElevador(source) or exigirCarroProprio(source, placaDo(veh))
     if err then return false, err end
     if Entity(veh).state[STATE_ELEV] then return false, 'O carro já está no elevador' end
     if carroComGente(veh) then return false, 'Tire todo mundo de dentro do carro' end
@@ -1105,7 +1141,7 @@ local function validarCambio(source, netId, itemName)
         return nil, 'Isso só pode ser feito dentro da oficina'
     end
     if not ehMecanico(source, true) then
-        err = exigirHab(source, Config.cambio.habilidade)
+        err = exigirHab(source, Config.cambio.habilidade) or exigirCarroProprio(source, placaDo(veh))
         if err then return nil, err end
     end
     if exports.ox_inventory:Search(source, 'count', itemName) < 1 then
@@ -1150,20 +1186,14 @@ end)
 ---------------------------------------------------------------------
 -- Suspensão regulável: o dono do carro ou um mecânico regula (sem chave)
 ---------------------------------------------------------------------
-local function ehDono(source, plate)
-    local player = exports.qbx_core:GetPlayer(source)
-    if not player then return false end
-    return MySQL.scalar.await('SELECT 1 FROM player_vehicles WHERE plate = ? AND citizenid = ?',
-        { plate, player.PlayerData.citizenid }) ~= nil
-end
-
 local function validarSusp(source, netId)
     local veh, err = pegarVeiculo(source, netId, true)
     if not veh then return nil, err end
     local dados = dadosDoVeiculo(veh)
     if not dados.suspensao then return nil, 'Esse carro não tem suspensão regulável' end
-    if not ehMecanico(source, Config.suspensao.mecanicoPrecisaServico) and not ehDono(source, placaDo(veh)) then
-        return nil, 'Só o dono do carro ou um mecânico pode regular a suspensão'
+    if not ehMecanico(source, Config.suspensao.mecanicoPrecisaServico) then
+        err = exigirDonoOuLicenca(source, placaDo(veh))
+        if err then return nil, err end
     end
     return veh, nil, dados
 end

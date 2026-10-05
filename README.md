@@ -10,6 +10,8 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Notebook de remap (turbo, ignição, limitador, mistura) com risco ao motor
   - Cada peça pede uma habilidade da árvore de Mecânica (pista_skills) ou mecânico especializado (cargo 3+)
   - Instalação pode falhar para quem não é especializado (a peça não é gasta)
+  - Quem não é mecânico em serviço só prepara o próprio carro; no dos outros só remap e suspensão,
+    e só com o item `licenca_funcionamento` (Junta Comercial)
 - `resources/[pista]/pista_skills` — skills (tela no `/skills` ou F7)
   - Árvore de Mecânica: 10 níveis, 12 pontos, 15 habilidades em Motor, Chassi, Eletrônica e Passivas
   - XP por peça nova instalada, consertos, retífica, dinamômetro (`/dyno`), aprendiz, manuais técnicos

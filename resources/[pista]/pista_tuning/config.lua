@@ -8,6 +8,16 @@ Config = {}
 -- O mecânico especializado (emprego 'mechanic', cargo 3+, em serviço) sabe todas:
 -- isso é configurado em pista_skills/config.lua (profissao).
 
+-- Carro de quem? Quem não é mecânico em serviço só prepara o PRÓPRIO carro
+-- (peças, motor, elevador, transmissão). No carro dos outros só pode fazer
+-- remap e regular a suspensão, e só com a licença de funcionamento no inventário.
+-- Consertos de rua (pneu, funilaria, kit de reparo) continuam livres em qualquer carro.
+Config.licenca = {
+    item = 'licenca_funcionamento',
+    label = 'Licença de funcionamento',
+    jobMecanico = 'mechanic',   -- mecânico em serviço (qualquer cargo) mexe em qualquer carro
+}
+
 -- Falha na instalação (só para quem não é mecânico especializado).
 -- A peça não é gasta, a ferramenta desgasta e o jogador ganha uma parte do XP.
 -- A passiva "Precisão" corta a chance pela metade.
