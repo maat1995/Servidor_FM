@@ -12,10 +12,17 @@ Config = {}
 -- (peças, motor, elevador, transmissão). No carro dos outros só pode fazer
 -- remap e regular a suspensão, e só com a licença de funcionamento no inventário.
 -- Consertos de rua (pneu, funilaria, kit de reparo) continuam livres em qualquer carro.
+-- A licença é emitida por um advogado (/emitirlicenca [id]), sai no nome e no
+-- ID do jogador e vale por alguns dias. Não serve para outra pessoa.
 Config.licenca = {
     item = 'licenca_funcionamento',
     label = 'Licença de funcionamento',
     jobMecanico = 'mechanic',   -- mecânico em serviço (qualquer cargo) mexe em qualquer carro
+    validadeDias = 30,
+    -- Quem pode emitir: emprego = cargo mínimo. Admin também pode.
+    emissores = { lawyer = 0 },
+    emissorEmServico = false,   -- true = o advogado precisa estar em serviço
+    distancia = 5.0,            -- o advogado precisa estar perto do jogador
 }
 
 -- Falha na instalação (só para quem não é mecânico especializado).

@@ -679,7 +679,7 @@ return {
     },
     ['licenca_funcionamento'] = {
         label = 'Licença de funcionamento', weight = 50, stack = false, close = true,
-        description = 'Firma reconhecida: permite fazer remap e regular a suspensão no carro de outros jogadores.',
+        description = 'Firma reconhecida emitida por advogado: remap e regulagem de suspensão no carro de outros jogadores. Só vale para o titular e dentro da validade.',
     },
     ['manual_motor'] = {
         label = 'Manual técnico: Motor', weight = 400, stack = true, close = true,

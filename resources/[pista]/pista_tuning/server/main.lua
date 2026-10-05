@@ -137,8 +137,25 @@ local function donoDaPlaca(source, plate)
         { plate, player.PlayerData.citizenid }) ~= nil
 end
 
+--- Procura uma licença no nome do jogador e dentro da validade.
+--- Retorna true, ou false + motivo (licença de outra pessoa, vencida...)
 local function temLicenca(source)
-    return (exports.ox_inventory:Search(source, 'count', Config.licenca.item) or 0) > 0
+    local player = exports.qbx_core:GetPlayer(source)
+    if not player then return false end
+    local slots = exports.ox_inventory:GetSlotsWithItem(source, Config.licenca.item) or {}
+    if #slots == 0 then return false end
+    local motivo = 'licença inválida'
+    for _, slot in ipairs(slots) do
+        local m = slot.metadata or {}
+        if m.citizenid ~= player.PlayerData.citizenid then
+            motivo = 'essa licença está no nome de outra pessoa'
+        elseif not m.validade or m.validade < os.time() then
+            motivo = ('sua licença venceu em %s'):format(m.validade and os.date('%d/%m/%Y', m.validade) or '?')
+        else
+            return true
+        end
+    end
+    return false, motivo
 end
 
 --- Peças, motor, elevador e transmissão: mecânico em serviço ou dono do carro
@@ -150,8 +167,10 @@ end
 --- Remap e regulagem de suspensão: mecânico em serviço, dono ou quem tem a licença
 local function exigirDonoOuLicenca(source, plate)
     if mecanicoEmServico(source) or donoDaPlaca(source, plate) then return nil end
-    if temLicenca(source) then return nil end
-    return ('No carro dos outros você precisa da %s'):format(Config.licenca.label)
+    local ok, motivo = temLicenca(source)
+    if ok then return nil end
+    if motivo then return ('No carro dos outros você precisa da %s: %s'):format(Config.licenca.label, motivo) end
+    return ('No carro dos outros você precisa da %s (peça a um advogado)'):format(Config.licenca.label)
 end
 
 ---------------------------------------------------------------------
@@ -866,6 +885,64 @@ end)
 -- Comandos
 ---------------------------------------------------------------------
 -- /minhaskill e /setskill agora ficam no pista_skills
+
+---------------------------------------------------------------------
+-- Licença de funcionamento: emitida pelo advogado, no nome do jogador
+---------------------------------------------------------------------
+local function podeEmitir(source)
+    local okAdmin, admin = pcall(function() return exports.qbx_core:HasPermission(source, 'admin') end)
+    if okAdmin and admin then return true end
+    local player = exports.qbx_core:GetPlayer(source)
+    local job = player and player.PlayerData.job
+    if not job then return false end
+    local minimo = Config.licenca.emissores[job.name]
+    if not minimo then return false end
+    if Config.licenca.emissorEmServico and not job.onduty then return false end
+    return (job.grade and job.grade.level or 0) >= minimo
+end
+
+lib.addCommand('emitirlicenca', {
+    help = 'Emitir licença de funcionamento para um jogador (advogado)',
+    params = { { name = 'id', type = 'playerId', help = 'ID do jogador' } },
+}, function(source, args)
+    if not podeEmitir(source) then
+        return exports.qbx_core:Notify(source, 'Só um advogado pode emitir a licença de funcionamento', 'error')
+    end
+    local alvo = exports.qbx_core:GetPlayer(args.id)
+    if not alvo then return exports.qbx_core:Notify(source, 'Jogador não encontrado', 'error') end
+    if args.id ~= source then
+        local d = #(GetEntityCoords(GetPlayerPed(source)) - GetEntityCoords(GetPlayerPed(args.id)))
+        if d > Config.licenca.distancia then
+            return exports.qbx_core:Notify(source, 'Fique perto do jogador para emitir a licença', 'error')
+        end
+    end
+
+    local emissor = exports.qbx_core:GetPlayer(source)
+    local ci = alvo.PlayerData.charinfo or {}
+    local nome = ('%s %s'):format(ci.firstname or '', ci.lastname or '')
+    local cid = alvo.PlayerData.citizenid
+    local validade = os.time() + Config.licenca.validadeDias * 86400
+    local nomeEmissor = emissor and emissor.PlayerData.charinfo
+        and ('%s %s'):format(emissor.PlayerData.charinfo.firstname, emissor.PlayerData.charinfo.lastname) or 'Administração'
+
+    local metadata = {
+        citizenid = cid,
+        titular = nome,
+        emitida = os.time(),
+        validade = validade,
+        emitidaPor = nomeEmissor,
+        description = ('Titular: %s (ID %s)  \nVálida até %s  \nEmitida por %s'):format(
+            nome, cid, os.date('%d/%m/%Y', validade), nomeEmissor),
+    }
+    if not exports.ox_inventory:CanCarryItem(args.id, Config.licenca.item, 1, metadata) then
+        return exports.qbx_core:Notify(source, 'O jogador não tem espaço no inventário', 'error')
+    end
+    exports.ox_inventory:AddItem(args.id, Config.licenca.item, 1, metadata)
+    exports.qbx_core:Notify(args.id, ('Você recebeu a %s, válida até %s'):format(Config.licenca.label, os.date('%d/%m/%Y', validade)), 'success', 8000)
+    if args.id ~= source then
+        exports.qbx_core:Notify(source, ('Licença emitida para %s (ID %s)'):format(nome, cid), 'success')
+    end
+end)
 
 lib.addCommand('pegarcoords', {
     help = 'Mostra e copia a sua posição (para configurar a oficina)',

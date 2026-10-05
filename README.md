@@ -11,7 +11,7 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Cada peça pede uma habilidade da árvore de Mecânica (pista_skills) ou mecânico especializado (cargo 3+)
   - Instalação pode falhar para quem não é especializado (a peça não é gasta)
   - Quem não é mecânico em serviço só prepara o próprio carro; no dos outros só remap e suspensão,
-    e só com o item `licenca_funcionamento` (Junta Comercial)
+    e só com a `licenca_funcionamento`: emitida por advogado (`/emitirlicenca [id]`), no nome do jogador, vale 30 dias
 - `resources/[pista]/pista_skills` — skills (tela no `/skills` ou F7)
   - Árvore de Mecânica: 10 níveis, 12 pontos, 15 habilidades em Motor, Chassi, Eletrônica e Passivas
   - XP por peça nova instalada, consertos, retífica, dinamômetro (`/dyno`), aprendiz, manuais técnicos
@@ -32,6 +32,7 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
 
 ## Comandos (admin)
 
+- `/emitirlicenca [id]` (advogado ou admin)
 - `/setskill [id] [nivel]` · `/darxp [id] [xp]` · `/resetskill [id]` (devolve os pontos) · `/minhaskill`
 - `/pegarcoords` — mostra e copia a posição
 - `/ajustegancho x y z` · `/ajusteempurrar x y z rz`
