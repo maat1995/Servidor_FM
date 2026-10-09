@@ -37,6 +37,8 @@ return {
 			{ name = 'macaco', price = 1 },
 			{ name = 'kit_funilaria', price = 1 },
 			{ name = 'kit_retifica', price = 1 },
+			{ name = 'jogo_pistoes', price = 1 },
+			{ name = 'jogo_bielas', price = 1 },
 			{ name = 'repairkit', price = 1 },
 			{ name = 'advancedrepairkit', price = 1 },
 		}, locations = {

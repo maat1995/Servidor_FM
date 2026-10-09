@@ -62,6 +62,17 @@ function RiscosMontagem(dados)
     return lista
 end
 
+--- Motor quebrado: o que ainda falta fazer na bancada (lista de textos, na ordem)
+function PendentesMotor(dados)
+    local q = dados and dados.motorQuebrado
+    if type(q) ~= 'table' then return {} end
+    local lista = {}
+    if q.retifica then lista[#lista + 1] = 'retífica' end
+    if q.pistao then lista[#lista + 1] = 'pistões novos' end
+    if q.bielas then lista[#lista + 1] = 'bielas novas' end
+    return lista
+end
+
 --- Nome da montagem, para mostrar nos menus
 function NomeMontagem(dados)
     local pistao = TipoPistao(dados)

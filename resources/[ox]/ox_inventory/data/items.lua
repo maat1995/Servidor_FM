@@ -677,6 +677,14 @@ return {
         description = 'Recarrega o nitro de um carro com kit instalado.',
         client = { export = 'pista_tuning.usarGarrafaNitro' },
     },
+    ['jogo_pistoes'] = {
+        label = 'Jogo de pistões', weight = 4000, stack = true, close = true,
+        description = 'Pistões originais novos. Para reconstruir um motor quebrado, na bancada, depois da retífica.',
+    },
+    ['jogo_bielas'] = {
+        label = 'Jogo de bielas', weight = 3000, stack = true, close = true,
+        description = 'Bielas originais novas. Para reconstruir um motor quebrado, na bancada, depois da retífica.',
+    },
     ['licenca_funcionamento'] = {
         label = 'Licença de funcionamento', weight = 50, stack = false, close = true,
         description = 'Firma reconhecida emitida por advogado: remap e regulagem de suspensão no carro de outros jogadores. Só vale para o titular e dentro da validade.',

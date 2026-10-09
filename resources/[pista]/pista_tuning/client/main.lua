@@ -152,12 +152,12 @@ local function aplicarPreparacao(veh)
     if AplicarSuspensao then AplicarSuspensao(veh, dados) end
 
     -- Motor retificado na bancada: volta novo quando o carro tem motor de novo
-    if dados.motorRetificado and not dados.motor then
+    if dados.motorRetificado and not dados.motor and not dados.motorQuebrado then
         SetVehicleEngineHealth(veh, 1000.0)
         TriggerServerEvent('pista_tuning:server:retificaAplicada', VehToNet(veh))
     end
 
-    SetVehicleUndriveable(veh, dados.motor ~= nil)
+    SetVehicleUndriveable(veh, dados.motor ~= nil or dados.motorQuebrado ~= nil)
 end
 
 local function carregarEAplicar(veh)
@@ -166,8 +166,11 @@ local function carregarEAplicar(veh)
         Wait(200) -- espera o state bag chegar
     end
     aplicarPreparacao(veh)
-    if DadosDo(veh).motor then
+    local d = DadosDo(veh)
+    if d.motor then
         Avisar('Esse carro está sem motor', 'error', 5000)
+    elseif d.motorQuebrado then
+        Avisar(('Motor quebrado. Falta: %s'):format(table.concat(PendentesMotor(d), ', ')), 'error', 7000)
     end
 end
 
@@ -192,17 +195,39 @@ AddStateBagChangeHandler(STATE_KEY, nil, function(bagName)
     end)
 end)
 
--- Carro sem motor não liga
+-- Carro sem motor (ou com motor quebrado) não liga
 CreateThread(function()
     while true do
         local espera = 1000
         local veh = cache.vehicle
-        if veh and cache.seat == -1 and DadosDo(veh).motor then
-            espera = 0
-            SetVehicleEngineOn(veh, false, true, true)
-            SetVehicleUndriveable(veh, true)
+        if veh and cache.seat == -1 then
+            local d = DadosDo(veh)
+            if d.motor or d.motorQuebrado then
+                espera = 0
+                SetVehicleEngineOn(veh, false, true, true)
+                SetVehicleUndriveable(veh, true)
+            end
         end
         Wait(espera)
+    end
+end)
+
+-- Motor chegou a 0%: quebra de vez (avisa o servidor uma vez por carro)
+CreateThread(function()
+    local avisado = {}
+    while true do
+        Wait(1000)
+        local veh = cache.vehicle
+        if veh and cache.seat == -1 then
+            local d = DadosDo(veh)
+            if not d.motor and not d.motorQuebrado and GetVehicleEngineHealth(veh) < Config.motorQuebrado.limiar then
+                local placa = GetVehicleNumberPlateText(veh)
+                if not avisado[placa] or GetGameTimer() - avisado[placa] > 10000 then
+                    avisado[placa] = GetGameTimer()
+                    TriggerServerEvent('pista_tuning:server:motorQuebrou', VehToNet(veh))
+                end
+            end
+        end
     end
 end)
 
@@ -340,6 +365,14 @@ abrirMenu = function(veh)
             title = 'Carro sem motor',
             description = 'O motor está fora do carro, na oficina',
             icon = 'fa-solid fa-triangle-exclamation',
+            iconColor = '#f85149',
+            readOnly = true,
+        }
+    elseif dados.motorQuebrado then
+        opcoes[#opcoes + 1] = {
+            title = 'Motor quebrado',
+            description = ('Tire o motor e leve para a bancada. Falta: %s'):format(table.concat(PendentesMotor(dados), ', ')),
+            icon = 'fa-solid fa-skull-crossbones',
             iconColor = '#f85149',
             readOnly = true,
         }

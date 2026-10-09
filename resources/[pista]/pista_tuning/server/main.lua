@@ -717,6 +717,10 @@ lib.callback.register('pista_tuning:server:instalarNoMotor', function(source, ne
     if not obj then return false, err end
     err = exigirHab(source, peca.habilidade) or checarRequisitos(peca, dados)
     if err then return false, err end
+    local q = type(dados.motorQuebrado) == 'table' and dados.motorQuebrado or nil
+    if q and q.retifica and (peca.slot == 'pistao' or peca.slot == 'bielas') then
+        return false, 'Esse motor quebrou: faça a retífica antes de montar pistões e bielas'
+    end
     if exports.ox_inventory:Search(source, 'count', itemName) < 1 then
         return false, ('Você não tem %s'):format(peca.label)
     end
@@ -730,10 +734,15 @@ lib.callback.register('pista_tuning:server:instalarNoMotor', function(source, ne
     end
 
     colocarPeca(source, dados, itemName, peca)
+    local msg = ('%s instalado no motor'):format(peca.label)
+    if q and (peca.slot == 'pistao' or peca.slot == 'bielas') then
+        q[peca.slot] = nil
+        msg = ConferirMotorQuebrado(dados) or msg
+    end
     salvar(st.plate, dados)
     gastarFerramenta(source, 'torquimetro', 'peca')
     xpPeca(source, st.plate, itemName, peca.xp, peca.label)
-    return true, ('%s instalado no motor'):format(peca.label)
+    return true, msg
 end)
 
 lib.callback.register('pista_tuning:server:removerDoMotor', function(source, netId, slot)
@@ -1566,8 +1575,15 @@ local function validarReparo(source, netId, tipo)
         err = exigirFerramenta(source, 'macaco')
         if err then return nil, err end
     end
-    if (tipo == 'emergencia' or tipo == 'avancado') and dadosDoVeiculo(veh).motor then
-        return nil, 'Esse carro está sem motor'
+    if tipo == 'emergencia' or tipo == 'avancado' then
+        local dados = dadosDoVeiculo(veh)
+        if dados.motor then return nil, 'Esse carro está sem motor' end
+        if not dados.motorQuebrado and GetVehicleEngineHealth(veh) < Config.motorQuebrado.limiar then
+            QuebrarMotor(veh, dados)
+        end
+        if dados.motorQuebrado then
+            return nil, 'O motor quebrou: kit não resolve. Tire o motor, retifique e troque pistões e bielas.'
+        end
     end
     return veh, nil, cfg
 end
@@ -1598,15 +1614,112 @@ lib.callback.register('pista_tuning:server:retificarMotor', function(source, net
     local cfg = Config.reparo.retifica
     local obj, err, st, dados = validarMotorAberto(source, netId, true)
     if not obj then return false, err end
-    if dados.motorRetificado then return false, 'Esse motor já foi retificado' end
+    local quebrado = type(dados.motorQuebrado) == 'table'
+    if dados.motorRetificado and not (quebrado and dados.motorQuebrado.retifica) then
+        return false, 'Esse motor já foi retificado'
+    end
     if not exports.ox_inventory:RemoveItem(source, cfg.item, 1) then
         return false, 'Você precisa do kit de retífica'
     end
     dados.motorRetificado = true
+    local msg = 'Motor retificado! Ele volta novo quando for recolocado no carro.'
+    if quebrado then
+        dados.motorQuebrado.retifica = nil
+        msg = ConferirMotorQuebrado(dados) or msg
+    end
     salvar(st.plate, dados)
     gastarFerramenta(source, 'torquimetro', 'peca')
     darXP(source, cfg.xp, 'retífica', { cooldown = { chave = 'retifica:' .. st.plate, segundos = 3600 } })
-    return true, 'Motor retificado! Ele volta novo quando for recolocado no carro.'
+    return true, msg
+end)
+
+---------------------------------------------------------------------
+-- Motor quebrado (vida chegou a 0%)
+---------------------------------------------------------------------
+--- Marca o motor como quebrado: pistões e bielas são perdidos
+function QuebrarMotor(veh, dados)
+    dados = dados or dadosDoVeiculo(veh)
+    if dados.motorQuebrado or dados.motor then return end
+    dados.motorQuebrado = { retifica = true, pistao = true, bielas = true }
+    dados.pistao = nil
+    dados.bielas = nil
+    dados.motorRetificado = nil
+    aplicarDados(veh, dados)
+end
+
+--- Se não falta mais nada, o motor deixa de estar quebrado. Retorna a mensagem.
+function ConferirMotorQuebrado(dados)
+    local falta = PendentesMotor(dados)
+    if #falta == 0 then
+        dados.motorQuebrado = nil
+        return 'Motor reconstruído! Feche, recoloque no carro e ele volta novo.'
+    end
+    return ('Feito. Ainda falta: %s'):format(table.concat(falta, ', '))
+end
+
+RegisterNetEvent('pista_tuning:server:motorQuebrou', function(netId)
+    local source = source
+    local veh = NetworkGetEntityFromNetworkId(netId or 0)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    if GetPedInVehicleSeat(veh, -1) ~= GetPlayerPed(source) then return end
+    if GetVehicleEngineHealth(veh) >= Config.motorQuebrado.limiar + 50.0 then return end
+    local dados = dadosDoVeiculo(veh)
+    if dados.motorQuebrado or dados.motor then return end
+    QuebrarMotor(veh, dados)
+    exports.qbx_core:Notify(source, 'O motor quebrou! Só retífica e peças novas resolvem agora.', 'error', 8000)
+end)
+
+--- Jogo de pistões ou de bielas originais no motor quebrado (bancada, motor aberto)
+lib.callback.register('pista_tuning:server:pecaNovaMotor', function(source, netId, tipo)
+    local cfg = Config.motorQuebrado
+    local item = tipo == 'pistao' and cfg.itemPistoes or tipo == 'bielas' and cfg.itemBielas or nil
+    if not item then return false, 'Peça inválida' end
+    local obj, err, st, dados = validarMotorAberto(source, netId, true)
+    if not obj then return false, err end
+    err = exigirHab(source, cfg.habilidade)
+    if err then return false, err end
+    local q = type(dados.motorQuebrado) == 'table' and dados.motorQuebrado or nil
+    if not q or not q[tipo] then return false, 'Esse motor não precisa disso' end
+    if q.retifica then return false, 'Faça a retífica antes de montar pistões e bielas' end
+    if exports.ox_inventory:Search(source, 'count', item) < 1 then
+        local it = exports.ox_inventory:Items(item)
+        return false, ('Você precisa de %s'):format(it and it.label or item)
+    end
+    if falhou(source) then
+        for _ = 1, 1 + (Config.falha.desgasteExtra or 0) do gastarFerramenta(source, 'torquimetro', 'peca') end
+        xpFalha(source, st.plate, item, cfg.xpPeca)
+        return false, 'A montagem deu errado! A peça não foi gasta, tente de novo.'
+    end
+    if not exports.ox_inventory:RemoveItem(source, item, 1) then return false, 'Não foi possível usar a peça' end
+    q[tipo] = nil
+    local msg = ConferirMotorQuebrado(dados)
+    salvar(st.plate, dados)
+    gastarFerramenta(source, 'torquimetro', 'peca')
+    darXP(source, cfg.xpPeca, 'motor', { cooldown = { chave = ('pecanova:%s:%s'):format(st.plate, tipo), segundos = 3600 } })
+    return true, msg
+end)
+
+-- /consertarmotor (admin): tira a marca de quebrado do carro em que você está ou do mais perto
+lib.addCommand('consertarmotor', {
+    help = 'Tira a marca de motor quebrado do carro (admin)',
+    restricted = 'group.admin',
+}, function(source)
+    local ped = GetPlayerPed(source)
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh == 0 then
+        local eu, perto, dist = GetEntityCoords(ped), nil, 6.0
+        for _, v in ipairs(GetAllVehicles()) do
+            local d = #(GetEntityCoords(v) - eu)
+            if d < dist then perto, dist = v, d end
+        end
+        veh = perto or 0
+    end
+    if veh == 0 then return exports.qbx_core:Notify(source, 'Nenhum carro por perto', 'error') end
+    local dados = dadosDoVeiculo(veh)
+    dados.motorQuebrado = nil
+    dados.motorRetificado = true -- o próximo motorista recebe o motor novo
+    aplicarDados(veh, dados)
+    exports.qbx_core:Notify(source, 'Motor liberado: entre no carro para ele voltar novo', 'success')
 end)
 
 -- O motorista aplicou a vida do motor retificado: limpa a marca

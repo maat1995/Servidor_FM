@@ -179,6 +179,9 @@ local function kitMotor(tipo)
     local veh = VeiculoProximo()
     if not veh then return Avisar('Nenhum veículo por perto', 'error') end
     local vida = Config.reparo[tipo].vidaMotor
+    if DadosDo(veh).motorQuebrado or GetVehicleEngineHealth(veh) < Config.motorQuebrado.limiar then
+        return Avisar('O motor quebrou: kit não resolve. Tire o motor, retifique e troque pistões e bielas.', 'error', 7000)
+    end
     if GetVehicleEngineHealth(veh) >= vida then
         return Avisar('O motor está melhor do que esse kit consegue deixar', 'error')
     end
@@ -319,7 +322,8 @@ lib.addKeybind({
 -- Aviso em cima do para-choque quando o carro está quebrado (a tecla funciona
 -- em qualquer carro desligado; o aviso só aparece no que precisa de ajuda)
 local function carroQuebrado(veh)
-    return GetVehicleEngineHealth(veh) <= 300.0 or DadosDo(veh).motor ~= nil
+    local d = DadosDo(veh)
+    return GetVehicleEngineHealth(veh) <= 300.0 or d.motor ~= nil or d.motorQuebrado ~= nil
 end
 
 CreateThread(function()

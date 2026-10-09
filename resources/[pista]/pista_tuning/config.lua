@@ -83,6 +83,23 @@ Config.reparo = {
     -- Retífica: no motor aberto na bancada, deixa o motor novo (1000) ao recolocar
     retifica   = { item = 'kit_retifica', tempo = 30000, xp = 30 },
 }
+-- MOTOR QUEBRADO
+-- Enquanto o motor tiver pelo menos 1% de vida, os kits de reparo funcionam.
+-- Se chegar a 0% ele QUEBRA: o carro não liga e os kits não adiantam mais.
+-- Aí é preciso tirar o motor, levar para a bancada, abrir e fazer nesta ordem:
+--   1) retífica (kit de retífica)  2) pistões novos  3) bielas novas
+-- Os pistões e bielas que estavam no motor (inclusive forjados) são perdidos.
+-- Pode usar o jogo original (jogo_pistoes / jogo_bielas) ou peças de preparação
+-- (pistão taxado/forjado, bielas forjadas), que também contam.
+Config.motorQuebrado = {
+    limiar = 10.0,              -- vida do motor (0 a 1000). Abaixo disso = quebrado (10 = 1%)
+    itemPistoes = 'jogo_pistoes',
+    itemBielas = 'jogo_bielas',
+    habilidade = 'motor_bancada',
+    tempoPeca = 20000,          -- ms para montar o jogo de pistões ou de bielas
+    xpPeca = 20,
+}
+
 -- O mesmo conserto no mesmo carro só dá XP de novo depois desse tempo (minutos)
 Config.reparoCooldownXP = 15
 
@@ -177,9 +194,9 @@ Config.elevador = {
     -- Quem não é mecânico usa com a habilidade de Freios ou de Suspensão regulável
     habilidades = { 'freios', 'suspensao' },
     xpFreio = 20,               -- XP ao terminar o kit de freio nas 4 rodas
-    altura = 1.6,               -- quanto o carro sobe (metros)
-    tempoSubir = 6000,
-    tempoDescer = 6000,
+    altura = 0.0,               -- o carro fica no chão (era 1.6 quando subia)
+    tempoSubir = 2500,          -- travar o carro no lugar
+    tempoDescer = 2000,         -- liberar o carro
     tempoRoda = 8000,           -- tirar ou colocar uma roda
     tempoFreio = 10000,         -- instalar o freio em uma roda
     propRoda = `prop_wheel_01`, -- roda que fica no chão enquanto está fora do carro

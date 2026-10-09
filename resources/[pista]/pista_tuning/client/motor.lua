@@ -427,6 +427,16 @@ local function instalarNoMotor(motor, itemName)
     Avisar(msg, ok and 'success' or 'error')
 end
 
+local function pecaNovaMotor(motor, tipo)
+    local cfg = Config.motorQuebrado
+    local label = tipo == 'pistao' and 'o jogo de pistões' or 'o jogo de bielas'
+    if not Trabalhar(cfg.tempoPeca, ('Montando %s...'):format(label), { anim = ANIM_AGACHADO }) then
+        return Avisar('Cancelado', 'error')
+    end
+    local ok, msg = lib.callback.await('pista_tuning:server:pecaNovaMotor', false, ObjToNet(motor), tipo)
+    Avisar(msg, ok and 'success' or 'error', 6000)
+end
+
 local function motorAbertoProximo()
     for _, m in ipairs(objetosPerto(Config.motor.propMotor, STATE_MOTOR, GetEntityCoords(cache.ped), 2.5)) do
         local st = estadoMotor(m.obj)
@@ -516,6 +526,14 @@ local function abrirMenuBancada(b)
             description = st.aberto and 'Aberto' or 'Fechado',
             icon = 'fa-solid fa-gears', readOnly = true,
         }
+        local falta = PendentesMotor(dados)
+        if #falta > 0 then
+            opcoes[#opcoes + 1] = {
+                title = 'Motor quebrado',
+                description = ('Falta, nesta ordem: %s'):format(table.concat(falta, ', ')),
+                icon = 'fa-solid fa-skull-crossbones', iconColor = '#f85149', readOnly = true,
+            }
+        end
 
         if not st.aberto then
             opcoes[#opcoes + 1] = {
@@ -544,6 +562,27 @@ local function abrirMenuBancada(b)
                         metadata = instalado and { 'Clique para retirar' } or nil,
                         onSelect = instalado and function() executar(retirarDoMotor, motor, s.id, s.label) end or nil,
                     }
+                end
+            end
+            local q = dados.motorQuebrado
+            if type(q) == 'table' then
+                if q.retifica and TemItem(Config.reparo.retifica.item) then
+                    opcoes[#opcoes + 1] = {
+                        title = 'Retificar o motor', icon = 'fa-solid fa-gear', iconColor = '#f1c232',
+                        description = 'Usa o kit de retífica',
+                        onSelect = function() RetificarMotorProximo() end,
+                    }
+                end
+                for _, t in ipairs({ { 'pistao', Config.motorQuebrado.itemPistoes, 'Instalar jogo de pistões' },
+                                     { 'bielas', Config.motorQuebrado.itemBielas, 'Instalar jogo de bielas' } }) do
+                    if q[t[1]] and TemItem(t[2]) then
+                        opcoes[#opcoes + 1] = {
+                            title = t[3], icon = 'fa-solid fa-screwdriver-wrench', iconColor = '#58a6ff',
+                            description = q.retifica and 'Faça a retífica antes' or 'Peça original nova',
+                            disabled = q.retifica == true,
+                            onSelect = function() executar(pecaNovaMotor, motor, t[1]) end,
+                        }
+                    end
                 end
             end
             for nome, peca in pairs(Config.itens) do
@@ -705,3 +744,27 @@ AddEventHandler('onResourceStop', function(res)
         RemoveModelHide(p.x, p.y, p.z, 2.0, Config.motor.propGuincho, false)
     end
 end)
+
+---------------------------------------------------------------------
+-- /testeprop [modelo]: mostra um prop na sua frente (só você vê) para
+-- escolher modelos, por exemplo o torno. /testeprop sem nome apaga.
+---------------------------------------------------------------------
+local propTeste
+RegisterCommand('testeprop', function(_, args)
+    if propTeste and DoesEntityExist(propTeste) then DeleteEntity(propTeste) end
+    propTeste = nil
+    local nome = args[1]
+    if not nome then return end
+    local hash = joaat(nome)
+    if not IsModelInCdimage(hash) then
+        return Avisar(('O modelo %s não existe no jogo'):format(nome), 'error')
+    end
+    if not lib.requestModel(hash, 5000) then return Avisar('Não carregou o modelo', 'error') end
+    local pos = GetOffsetFromEntityInWorldCoords(cache.ped, 0.0, 2.0, 0.0)
+    propTeste = CreateObject(hash, pos.x, pos.y, pos.z, false, false, false)
+    SetEntityHeading(propTeste, GetEntityHeading(cache.ped) + 180.0)
+    PlaceObjectOnGroundProperly(propTeste)
+    FreezeEntityPosition(propTeste, true)
+    SetModelAsNoLongerNeeded(hash)
+    Avisar(('Prop %s na sua frente. /testeprop para apagar'):format(nome), 'success')
+end, false)
