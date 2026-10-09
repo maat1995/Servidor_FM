@@ -208,10 +208,19 @@ end
 ---------------------------------------------------------------------
 -- Lugares
 ---------------------------------------------------------------------
-local function naOficina(coords)
+-- Oficina da casa do jogador (pa_casas): vaga e bancada do motor, ou nil
+local function oficinaDaCasa(source)
+    if not source or GetResourceState('pa_casas') ~= 'started' then return nil end
+    local ok, pontos = pcall(function() return exports.pa_casas:PontosOficinaCasa(source) end)
+    return ok and pontos or nil
+end
+
+local function naOficina(coords, source)
     for _, o in ipairs(Config.oficinas) do
         if #(coords - o.coords) <= o.raio then return true end
     end
+    -- dentro da oficina da propria casa (instancia do pa_casas)
+    if oficinaDaCasa(source) then return true end
     return false
 end
 
@@ -357,7 +366,7 @@ local function validarPecaExterna(source, netId, itemName)
 
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return nil, err end
-    if Config.pecasExternasSoNaOficina and not naOficina(GetEntityCoords(veh)) then
+    if Config.pecasExternasSoNaOficina and not naOficina(GetEntityCoords(veh), source) then
         return nil, 'Isso só pode ser feito dentro da oficina'
     end
     err = exigirCarroProprio(source, placaDo(veh)) or exigirHab(source, peca.habilidade)
@@ -535,6 +544,8 @@ end)
 local function criarMotor(plate, m)
     local obj = criarObjeto(Config.motor.propMotor, vec3(m.x, m.y, m.z), m.h)
     if obj then
+        -- motor tirado dentro de uma instancia (ex.: oficina da casa) fica nela
+        if m.bucket and m.bucket ~= 0 then SetEntityRoutingBucket(obj, m.bucket) end
         Entity(obj).state:set(STATE_MOTOR, { plate = plate, aberto = m.aberto == true, ['local'] = m['local'] or 'chao' }, true)
     end
     return obj
@@ -550,7 +561,7 @@ end
 lib.callback.register('pista_tuning:server:retirarMotor', function(source, netId)
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return false, err end
-    if not naOficina(GetEntityCoords(veh)) then return false, 'Só dá para tirar o motor dentro da oficina' end
+    if not naOficina(GetEntityCoords(veh), source) then return false, 'Só dá para tirar o motor dentro da oficina' end
     err = exigirMecanico(source) or exigirCarroProprio(source, placaDo(veh)) or exigirFerramenta(source, 'soquetes')
     if err then return false, err end
 
@@ -561,7 +572,8 @@ lib.callback.register('pista_tuning:server:retirarMotor', function(source, netId
 
     -- O motor sai do cofre direto para os braços do mecânico
     local fc = frenteDo(veh, 1.6)
-    local m = { x = fc.x, y = fc.y, z = fc.z + 0.5, h = GetEntityHeading(veh), aberto = false, ['local'] = 'mao' }
+    local m = { x = fc.x, y = fc.y, z = fc.z + 0.5, h = GetEntityHeading(veh), aberto = false, ['local'] = 'mao',
+        bucket = GetPlayerRoutingBucket(source) }
     local motor = criarMotor(plate, m)
     if not motor then return false, 'Não foi possível tirar o motor' end
     local st = estadoMotor(motor)
@@ -581,7 +593,7 @@ end)
 lib.callback.register('pista_tuning:server:recolocarMotor', function(source, netId)
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return false, err end
-    if not naOficina(GetEntityCoords(veh)) then return false, 'Só dá para colocar o motor dentro da oficina' end
+    if not naOficina(GetEntityCoords(veh), source) then return false, 'Só dá para colocar o motor dentro da oficina' end
     err = exigirMecanico(source) or exigirCarroProprio(source, placaDo(veh)) or exigirFerramenta(source, 'soquetes')
     if err then return false, err end
 
@@ -601,9 +613,20 @@ lib.callback.register('pista_tuning:server:recolocarMotor', function(source, net
     return true, 'Motor recolocado'
 end)
 
---- Bancada livre perto de coords (sem outro motor em cima)
-local function bancadaLivrePerto(coords, coords2)
-    for i, b in ipairs(Config.bancadas) do
+--- Bancadas que valem para o jogador: as fixas da config + a da oficina da casa (indice 0)
+local function bancadasDo(source)
+    local lista = {}
+    for i, b in ipairs(Config.bancadas) do lista[#lista + 1] = { i = i, b = b } end
+    local casa = oficinaDaCasa(source)
+    if casa and casa.bancada then lista[#lista + 1] = { i = 0, b = casa.bancada } end
+    return lista
+end
+
+--- Bancada livre perto de coords (sem outro motor em cima, na mesma instancia)
+local function bancadaLivrePerto(coords, coords2, source)
+    local bucket = source and GetPlayerRoutingBucket(source) or 0
+    for _, item in ipairs(bancadasDo(source)) do
+        local i, b = item.i, item.b
         local bc = vec3(b.x, b.y, b.z)
         local perto = #(coords - bc) <= Config.motor.distanciaBancada
             or (coords2 and #(coords2 - bc) <= Config.motor.distanciaBancada)
@@ -611,7 +634,10 @@ local function bancadaLivrePerto(coords, coords2)
             local ocupada = false
             for _, obj in ipairs(objetosComState(STATE_MOTOR)) do
                 local onde = estadoMotor(obj)['local']
-                if onde ~= 'guincho' and onde ~= 'mao' and #(GetEntityCoords(obj) - bc) < 1.2 then ocupada = true end
+                if onde ~= 'guincho' and onde ~= 'mao' and GetEntityRoutingBucket(obj) == bucket
+                    and #(GetEntityCoords(obj) - bc) < 1.2 then
+                    ocupada = true
+                end
             end
             if not ocupada then return i, b end
         end
@@ -629,7 +655,7 @@ lib.callback.register('pista_tuning:server:podeDescerNaBancada', function(source
     if not stG.motor then return false, 'Não tem motor no guincho' end
     local motor = motorDaPlaca(stG.motor)
     if not motor then return false, 'Motor não encontrado' end
-    local i, b = bancadaLivrePerto(GetEntityCoords(guincho), GetEntityCoords(motor))
+    local i, b = bancadaLivrePerto(GetEntityCoords(guincho), GetEntityCoords(motor), source)
     if not i then return false, 'Leve o guincho mais perto da bancada (ou ela já tem um motor)' end
     return true, { bancada = i, x = b.x, y = b.y, z = b.z, h = b.w, motor = NetworkGetNetworkIdFromEntity(motor) }
 end)
@@ -638,6 +664,10 @@ end)
 lib.callback.register('pista_tuning:server:motorNaBancada', function(source, guinchoNet, bancada)
     local guincho = NetworkGetEntityFromNetworkId(guinchoNet or 0)
     local b = Config.bancadas[bancada]
+    if bancada == 0 then
+        local casa = oficinaDaCasa(source)
+        b = casa and casa.bancada
+    end
     if not guincho or guincho == 0 or not DoesEntityExist(guincho) or not b then return false end
     local stG = estadoGuincho(guincho)
     if not stG or not stG.motor then return false end
@@ -799,7 +829,7 @@ MySQL.ready(function()
                 cache[linha.plate] = dados
                 -- estava pendurado: fica no chão onde o guincho parou
                 if dados.motor['local'] == 'guincho' or dados.motor['local'] == 'mao' then dados.motor['local'] = 'chao' end
-                criarMotor(linha.plate, dados.motor)
+                if dados.motor['local'] ~= 'retifica' then criarMotor(linha.plate, dados.motor) end
             end
         end
     end)
@@ -1223,7 +1253,7 @@ local function validarCambio(source, netId, itemName)
     if not kit then return nil, 'Esse item não é uma transmissão' end
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return nil, err end
-    if Config.pecasExternasSoNaOficina and not naOficina(GetEntityCoords(veh)) then
+    if Config.pecasExternasSoNaOficina and not naOficina(GetEntityCoords(veh), source) then
         return nil, 'Isso só pode ser feito dentro da oficina'
     end
     if not ehMecanico(source, true) then
@@ -1441,7 +1471,7 @@ end)
 lib.callback.register('pista_tuning:server:lugarNaBancada', function(source, netId)
     local motor = motorNaMaoDe(source, netId)
     if not motor then return false, 'Você não está carregando esse motor' end
-    local i, b = bancadaLivrePerto(GetEntityCoords(GetPlayerPed(source)))
+    local i, b = bancadaLivrePerto(GetEntityCoords(GetPlayerPed(source)), nil, source)
     if not i then return false, 'Chegue perto de uma bancada livre' end
     return true, { x = b.x, y = b.y, z = b.z, h = b.w }
 end)
@@ -1611,6 +1641,7 @@ end)
 
 -- Retífica: no motor aberto na bancada. O motor volta novo quando for recolocado.
 lib.callback.register('pista_tuning:server:retificarMotor', function(source, netId)
+    if true then return false, 'A retífica agora é feita na máquina de retífica: feche o motor e leve ele nos braços até lá.' end
     local cfg = Config.reparo.retifica
     local obj, err, st, dados = validarMotorAberto(source, netId, true)
     if not obj then return false, err end
@@ -1720,6 +1751,85 @@ lib.addCommand('consertarmotor', {
     dados.motorRetificado = true -- o próximo motorista recebe o motor novo
     aplicarDados(veh, dados)
     exports.qbx_core:Notify(source, 'Motor liberado: entre no carro para ele voltar novo', 'success')
+end)
+
+---------------------------------------------------------------------
+-- Máquina de retífica
+---------------------------------------------------------------------
+local function pertoDaRetifica(source)
+    local c = Config.retifica.coords
+    return #(GetEntityCoords(GetPlayerPed(source)) - vec3(c.x, c.y, c.z)) <= Config.retifica.distancia + 1.5
+        and GetPlayerRoutingBucket(source) == 0
+end
+
+--- Lista o que está na máquina: { plate, falta (segundos, 0 = pronto) }
+lib.callback.register('pista_tuning:server:listaRetifica', function(source)
+    local lista = {}
+    local linhas = MySQL.query.await('SELECT plate, dados FROM pista_tuning WHERE dados LIKE ?', { '%"retifica"%' }) or {}
+    for _, l in ipairs(linhas) do
+        local d = cache[l.plate] or json.decode(l.dados)
+        if d and d.motor and d.motor['local'] == 'retifica' then
+            lista[#lista + 1] = { plate = l.plate, falta = math.max(0, (d.motor.retificaFim or 0) - os.time()) }
+        end
+    end
+    table.sort(lista, function(a, b) return a.falta < b.falta end)
+    return lista
+end)
+
+--- Deixa o motor que está nos braços na máquina (gasta o kit de retífica)
+lib.callback.register('pista_tuning:server:deixarNaRetifica', function(source, netId)
+    local cfg = Config.reparo.retifica
+    local motor, st = motorNaMaoDe(source, netId)
+    if not motor then return false, 'Você não está carregando esse motor' end
+    if not pertoDaRetifica(source) then return false, 'Chegue perto da máquina de retífica' end
+    local err = exigirMecanico(source) or exigirCarroProprio(source, st.plate)
+    if err then return false, err end
+    local dados = obterDados(st.plate)
+    if not dados.motor then return false, 'Motor não encontrado' end
+    local q = type(dados.motorQuebrado) == 'table' and dados.motorQuebrado or nil
+    if dados.motorRetificado and not (q and q.retifica) then return false, 'Esse motor já foi retificado' end
+    if q and not q.retifica then return false, 'Esse motor já passou pela retífica' end
+    if not exports.ox_inventory:RemoveItem(source, cfg.item, 1) then
+        return false, 'Você precisa do kit de retífica'
+    end
+    DeleteEntity(motor)
+    dados.motor['local'] = 'retifica'
+    dados.motor.retificaFim = os.time() + Config.retifica.tempo
+    salvar(st.plate, dados)
+    return true, ('Motor %s na retífica. Fica pronto em %d min.'):format(st.plate, math.ceil(Config.retifica.tempo / 60))
+end)
+
+--- Pega um motor pronto da máquina: ele vai para os braços
+lib.callback.register('pista_tuning:server:pegarDaRetifica', function(source, plate)
+    local cfg = Config.reparo.retifica
+    if type(plate) ~= 'string' then return false, 'Motor inválido' end
+    if not pertoDaRetifica(source) then return false, 'Chegue perto da máquina de retífica' end
+    local err = exigirMecanico(source) or exigirCarroProprio(source, plate)
+    if err then return false, err end
+    local dados = obterDados(plate)
+    if not dados.motor or dados.motor['local'] ~= 'retifica' then return false, 'Esse motor não está na retífica' end
+    if (dados.motor.retificaFim or 0) > os.time() then return false, 'Esse motor ainda não está pronto' end
+
+    local c = Config.retifica.coords
+    local frente = GetEntityCoords(GetPlayerPed(source))
+    local m = { x = frente.x, y = frente.y, z = frente.z + 0.5, h = c.w, aberto = false, ['local'] = 'mao' }
+    local motor = criarMotor(plate, m)
+    if not motor then return false, 'Não foi possível pegar o motor' end
+    local st = estadoMotor(motor)
+    st.carregadoPor = source
+    Entity(motor).state:set(STATE_MOTOR, st, true)
+    FreezeEntityPosition(motor, false)
+
+    dados.motor = { x = frente.x, y = frente.y, z = frente.z - 0.5, h = c.w, aberto = false, ['local'] = 'chao' }
+    dados.motorRetificado = true
+    local msg = 'Motor retificado! Ele volta novo quando for recolocado no carro.'
+    if type(dados.motorQuebrado) == 'table' then
+        dados.motorQuebrado.retifica = nil
+        msg = ConferirMotorQuebrado(dados) or msg
+    end
+    salvar(plate, dados)
+    darXP(source, cfg.xp, 'retífica', { cooldown = { chave = 'retifica:' .. plate, segundos = 3600 } })
+    return true, msg, NetworkGetNetworkIdFromEntity(motor)
 end)
 
 -- O motorista aplicou a vida do motor retificado: limpa a marca

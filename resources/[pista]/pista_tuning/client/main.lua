@@ -51,10 +51,19 @@ function TemFerramenta(chave)
     return TemItem(Config.ferramentas[chave].item)
 end
 
+-- Vaga e bancada do motor da oficina da casa (pa_casas), ou nil
+function OficinaDaCasa()
+    if GetResourceState('pa_casas') ~= 'started' then return nil end
+    local ok, pontos = pcall(function() return exports.pa_casas:PontosOficinaCasa() end)
+    return ok and pontos or nil
+end
+
 function NaOficina(coords)
     for _, o in ipairs(Config.oficinas) do
         if #(coords - o.coords) <= o.raio then return true end
     end
+    -- dentro da oficina da propria casa
+    if OficinaDaCasa() then return true end
     return false
 end
 

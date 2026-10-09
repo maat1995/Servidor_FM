@@ -59,6 +59,10 @@ local function pertoDeBancada(coords)
     for _, b in ipairs(Config.bancadas) do
         if #(coords - vec3(b.x, b.y, b.z)) <= Config.motor.distanciaBancada then return true end
     end
+    local casa = OficinaDaCasa()
+    if casa and casa.bancada and #(coords - vec3(casa.bancada.x, casa.bancada.y, casa.bancada.z)) <= Config.motor.distanciaBancada then
+        return true
+    end
     return false
 end
 
@@ -236,8 +240,21 @@ local function guinchoDaVaga(i)
     end
 end
 
+-- vaga da oficina da casa (pa_casas) no mesmo formato da Config.vagasMotor
+local function vagaDaCasa()
+    local casa = OficinaDaCasa()
+    if not casa or not casa.vaga then return nil end
+    return { label = 'Vaga do motor (oficina de casa)', carro = casa.vaga, raio = 3.0 }
+end
+
+local function vagaPorIndice(i)
+    if i == 0 then return vagaDaCasa() end
+    return Config.vagasMotor[i]
+end
+
 local function carroNaVaga(i)
-    local v = Config.vagasMotor[i]
+    local v = vagaPorIndice(i)
+    if not v then return nil end
     local centro = vec2(v.carro.x, v.carro.y)
     local melhor, melhorDist
     for _, veh in ipairs(GetGamePool('CVehicle')) do
@@ -354,7 +371,8 @@ end
 local function retirarMotor(i, veh)
     if not NaOficina(GetEntityCoords(veh)) then return Avisar('Só dá para tirar o motor dentro da oficina', 'error') end
     if not TemFerramenta('soquetes') then return Avisar('Você precisa do jogo de soquetes', 'error') end
-    if not encaixarCarro(veh, Config.vagasMotor[i]) then return Avisar('Não foi possível encaixar o carro', 'error') end
+    local vaga = vagaPorIndice(i)
+    if not vaga or not encaixarCarro(veh, vaga) then return Avisar('Não foi possível encaixar o carro', 'error') end
 
     if not Trabalhar(Config.motor.tempoRetirar, 'Soltando e tirando o motor...', { capo = veh }) then return end
     local ok, msg, motorNet = lib.callback.await('pista_tuning:server:retirarMotor', false, VehToNet(veh))
@@ -374,7 +392,8 @@ local function recolocarMotor(veh)
 end
 
 local function abrirMenuVaga(i)
-    local v = Config.vagasMotor[i]
+    local v = vagaPorIndice(i)
+    if not v then return end
     local veh = carroNaVaga(i)
     local opcoes = {}
 
@@ -454,8 +473,11 @@ function InstalarNoMotorProximo(itemName)
     executar(instalarNoMotor, motor, itemName)
 end
 
---- Kit de retífica (item): usado no motor aberto na bancada
+--- Kit de retífica (item): a retífica agora é na máquina
 function RetificarMotorProximo()
+    if true then
+        return Avisar('A retífica é feita na máquina de retífica da oficina: feche o motor e leve ele nos braços até lá.', 'inform', 8000)
+    end
     if cache.vehicle then return Avisar('Saia do veículo', 'error') end
     local motor = motorAbertoProximo()
     if not motor then
@@ -566,11 +588,11 @@ local function abrirMenuBancada(b)
             end
             local q = dados.motorQuebrado
             if type(q) == 'table' then
-                if q.retifica and TemItem(Config.reparo.retifica.item) then
+                if q.retifica then
                     opcoes[#opcoes + 1] = {
-                        title = 'Retificar o motor', icon = 'fa-solid fa-gear', iconColor = '#f1c232',
-                        description = 'Usa o kit de retífica',
-                        onSelect = function() RetificarMotorProximo() end,
+                        title = 'Falta a retífica', icon = 'fa-solid fa-gear', iconColor = '#f1c232',
+                        description = 'Feche o motor e leve nos braços até a máquina de retífica (precisa do kit)',
+                        readOnly = true,
                     }
                 end
                 for _, t in ipairs({ { 'pistao', Config.motorQuebrado.itemPistoes, 'Instalar jogo de pistões' },
@@ -635,8 +657,12 @@ CreateThread(function()
             local eu = GetEntityCoords(cache.ped)
             local alvo, tipo, indice
 
+            local casa = OficinaDaCasa()
             for bi, b in ipairs(Config.bancadas) do
                 if #(eu.xy - vec2(b.x, b.y)) <= 1.8 then alvo, tipo, indice = b, 'bancada', bi break end
+            end
+            if not alvo and casa and casa.bancada and #(eu.xy - vec2(casa.bancada.x, casa.bancada.y)) <= 1.8 then
+                alvo, tipo, indice = casa.bancada, 'bancada', 0
             end
             if not alvo and not carregando then
                 for _, m in ipairs(objetosPerto(Config.motor.propMotor, STATE_MOTOR, eu, 1.6)) do
@@ -652,6 +678,10 @@ CreateThread(function()
                     if #(eu.xy - vec2(v.carro.x, v.carro.y)) <= v.raio + 1.5 then
                         alvo, tipo, indice = v, 'vaga', vi break
                     end
+                end
+                local vc = not alvo and vagaDaCasa()
+                if vc and #(eu.xy - vec2(vc.carro.x, vc.carro.y)) <= vc.raio + 1.5 then
+                    alvo, tipo, indice = vc, 'vaga', 0
                 end
             end
 
@@ -768,3 +798,125 @@ RegisterCommand('testeprop', function(_, args)
     SetModelAsNoLongerNeeded(hash)
     Avisar(('Prop %s na sua frente. /testeprop para apagar'):format(nome), 'success')
 end, false)
+
+---------------------------------------------------------------------
+-- Máquina de retífica
+---------------------------------------------------------------------
+local maquina = nil
+
+local function minutos(seg)
+    if seg <= 0 then return 'pronto' end
+    local m, s = math.floor(seg / 60), seg % 60
+    return m > 0 and ('faltam %d min %02d s'):format(m, s) or ('faltam %d s'):format(s)
+end
+
+local function deixarNaRetifica()
+    local motor = carregando
+    if not motor then return end
+    if not TemItem(Config.reparo.retifica.item) then return Avisar('Você precisa do kit de retífica', 'error') end
+    local ok, msg = lib.callback.await('pista_tuning:server:deixarNaRetifica', false, ObjToNet(motor))
+    if ok then pararDeCarregar() end
+    Avisar(msg, ok and 'success' or 'error', 6000)
+end
+
+local function pegarDaRetifica(plate)
+    if carregando then return Avisar('Você já está carregando um motor', 'error') end
+    local ok, msg, motorNet = lib.callback.await('pista_tuning:server:pegarDaRetifica', false, plate)
+    if not ok then return Avisar(msg, 'error') end
+    local motor = entidadeDaRede(motorNet)
+    if motor then iniciarCarga(motor) end
+    Avisar(msg, 'success', 7000)
+end
+
+local function menuRetifica()
+    local lista = lib.callback.await('pista_tuning:server:listaRetifica', false) or {}
+    local opcoes = {}
+    if carregando then
+        local st = estadoMotor(carregando)
+        opcoes[#opcoes + 1] = {
+            title = ('Deixar o motor %s para retificar'):format(st and st.plate or ''),
+            description = ('Gasta 1 kit de retífica. Fica pronto em %d min.'):format(math.ceil(Config.retifica.tempo / 60)),
+            icon = 'fa-solid fa-download', iconColor = '#f1c232',
+            onSelect = function() executar(deixarNaRetifica) end,
+        }
+    end
+    local prontos, fazendo = 0, 0
+    for _, m in ipairs(lista) do
+        if m.falta <= 0 then
+            prontos = prontos + 1
+            opcoes[#opcoes + 1] = {
+                title = ('Motor %s'):format(m.plate),
+                description = 'Pronto. Clique para pegar',
+                icon = 'fa-solid fa-circle-check', iconColor = '#3fb950',
+                onSelect = function() executar(pegarDaRetifica, m.plate) end,
+            }
+        else
+            fazendo = fazendo + 1
+            opcoes[#opcoes + 1] = {
+                title = ('Motor %s'):format(m.plate),
+                description = ('Retificando: %s'):format(minutos(m.falta)),
+                icon = 'fa-solid fa-gear', iconColor = '#f1c232',
+                progress = math.floor(100 * (1 - m.falta / Config.retifica.tempo)),
+                colorScheme = 'yellow',
+                readOnly = true,
+            }
+        end
+    end
+    if #lista == 0 then
+        opcoes[#opcoes + 1] = { title = 'Nenhum motor na máquina', description = 'Traga um motor nos braços para retificar', icon = 'fa-solid fa-circle-info', readOnly = true }
+    end
+    lib.registerContext({
+        id = 'pista_retifica',
+        title = ('Retífica (%d retificando, %d prontos)'):format(fazendo, prontos),
+        options = opcoes,
+    })
+    lib.showContext('pista_retifica')
+end
+
+CreateThread(function()
+    local c = Config.retifica.coords
+    local centro = vec3(c.x, c.y, c.z)
+    local ponto = lib.points.new({ coords = centro, distance = 80.0 })
+
+    function ponto:onEnter()
+        if maquina and DoesEntityExist(maquina) then return end
+        if not lib.requestModel(Config.retifica.prop, 10000) then
+            return print('[pista_tuning] modelo da retífica não carregou')
+        end
+        maquina = CreateObjectNoOffset(Config.retifica.prop, c.x, c.y, c.z, false, false, false)
+        SetEntityHeading(maquina, c.w)
+        PlaceObjectOnGroundProperly(maquina)
+        FreezeEntityPosition(maquina, true)
+        SetModelAsNoLongerNeeded(Config.retifica.prop)
+    end
+
+    function ponto:onExit()
+        if maquina and DoesEntityExist(maquina) then DeleteEntity(maquina) end
+        maquina = nil
+        if self.ui then lib.hideTextUI() self.ui = nil end
+    end
+
+    function ponto:nearby()
+        local perto = self.currentDistance <= Config.retifica.distancia and not cache.vehicle and not ocupado
+        local texto = perto and (carregando and '[E] Retífica (deixar o motor)' or '[E] Retífica') or nil
+        if texto then
+            if self.ui ~= texto then
+                -- carregando: o texto de carga volta depois do menu
+                lib.showTextUI(texto, { position = 'left-center', icon = 'fa-solid fa-gear' })
+                self.ui = texto
+            end
+            if IsControlJustReleased(0, 38) then
+                lib.hideTextUI()
+                self.ui = nil
+                menuRetifica()
+            end
+        elseif self.ui then
+            lib.hideTextUI()
+            self.ui = nil
+        end
+    end
+end)
+
+AddEventHandler('onResourceStop', function(res)
+    if res == GetCurrentResourceName() and maquina and DoesEntityExist(maquina) then DeleteEntity(maquina) end
+end)

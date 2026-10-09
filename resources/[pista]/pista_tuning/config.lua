@@ -83,11 +83,22 @@ Config.reparo = {
     -- Retífica: no motor aberto na bancada, deixa o motor novo (1000) ao recolocar
     retifica   = { item = 'kit_retifica', tempo = 30000, xp = 30 },
 }
+-- RETÍFICA (máquina na oficina)
+-- A retífica não é mais feita na bancada: leve o motor nos braços até a máquina,
+-- deixe ele lá (gasta o kit de retífica) e volte quando estiver pronto.
+-- Na máquina dá para ver os motores que estão retificando e os que já estão prontos.
+Config.retifica = {
+    prop = `gr_prop_gr_speeddrill_01a`,
+    coords = vec4(-325.42, -119.70, 38.01, 157.5),
+    distancia = 2.2,        -- distância para o [E]
+    tempo = 300,            -- segundos que o motor fica retificando (5 min)
+}
+
 -- MOTOR QUEBRADO
 -- Enquanto o motor tiver pelo menos 1% de vida, os kits de reparo funcionam.
 -- Se chegar a 0% ele QUEBRA: o carro não liga e os kits não adiantam mais.
--- Aí é preciso tirar o motor, levar para a bancada, abrir e fazer nesta ordem:
---   1) retífica (kit de retífica)  2) pistões novos  3) bielas novas
+-- Aí é preciso tirar o motor e fazer nesta ordem:
+--   1) retífica (na máquina de retífica)  2) pistões novos  3) bielas novas (na bancada, motor aberto)
 -- Os pistões e bielas que estavam no motor (inclusive forjados) são perdidos.
 -- Pode usar o jogo original (jogo_pistoes / jogo_bielas) ou peças de preparação
 -- (pistão taxado/forjado, bielas forjadas), que também contam.

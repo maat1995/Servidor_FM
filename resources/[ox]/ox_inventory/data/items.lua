@@ -788,7 +788,7 @@ return {
     },
     ['kit_retifica'] = {
         label = 'Kit de retífica', weight = 10000, stack = true, close = true,
-        description = 'Use no motor aberto na bancada. O motor volta novo ao ser recolocado.',
+        description = 'Leve o motor nos braços até a máquina de retífica da oficina. O motor volta novo ao ser recolocado.',
         client = { export = 'pista_tuning.usarRetifica' },
     },
     ['jogo_soquetes'] = {
@@ -799,4 +799,39 @@ return {
         label = 'Torquímetro', weight = 1500, stack = false,
         description = 'Abre e fecha o motor e monta pistão e cabeçote. Desgasta com o uso.',
     },
+
+    -- pa_maconha
+    ['vaso_planta'] = { label = 'Vaso', weight = 1000, stack = true, client = { export = 'pa_maconha.usePot' } },
+    ['muda_maconha'] = { label = 'Muda de maconha', weight = 100, stack = true },
+    ['garrafa_agua'] = { label = 'Garrafa de água', weight = 500, stack = true },
+    ['maconha'] = { label = 'Maconha', weight = 50, stack = true },
+    ['seda'] = { label = 'Seda', weight = 5, stack = true, client = { export = 'pa_maconha.useSeda' } },
+    ['baseado'] = { label = 'Baseado', weight = 10, stack = true, client = { export = 'pa_maconha.useJoint' } },
+    ['saquinho'] = { label = 'Saquinho vazio', weight = 5, stack = true },
+    ['pacote_maconha'] = { label = 'Pacote de maconha', weight = 300, stack = true },
+    ['fertilizante'] = { label = 'Fertilizante', weight = 500, stack = true },
+    ['adubo'] = { label = 'Adubo', weight = 800, stack = true },
+    ['mesa_maconha'] = { label = 'Mesa de preparo', weight = 8000, stack = false, client = { export = 'pa_maconha.useTable' } },
+
+    -- pa_lavagem
+    ['cana'] = { label = 'Cana', weight = 400, stack = true },
+    ['fermento'] = { label = 'Fermento', weight = 100, stack = true },
+    ['mosto'] = { label = 'Mosto fermentado', weight = 2000, stack = true },
+    ['solvente_artesanal'] = { label = 'Solvente artesanal', weight = 500, stack = true },
+    ['solvente_industrial'] = { label = 'Solvente industrial', weight = 500, stack = true },
+    ['barril_fermentacao'] = { label = 'Barril de fermentação', weight = 10000, stack = false, client = { export = 'pa_lavagem.useBarrel' } },
+    ['alambique'] = { label = 'Alambique', weight = 15000, stack = false, client = { export = 'pa_lavagem.useStill' } },
+
+    -- pa_plantacao
+    ['semente_cana'] = { label = 'Semente de cana', weight = 50, stack = true, client = { export = 'pa_plantacao.plant_cana' } },
+    ['regador'] = { label = 'Regador', weight = 1500, stack = false, description = 'Enche em qualquer rio, lago ou mar.', client = { export = 'pa_plantacao.useCan' } },
+
+    -- pa_casas
+    ['caixa_movel'] = { label = 'Caixa de móvel', weight = 5000, stack = false, close = true, description = 'Móvel embalado. Monte pelo modo decorar (F7) dentro da sua casa.' },
+    ['mandado_busca'] = { label = 'Mandado de busca', weight = 10, stack = false, close = true },
+    ['pe_de_cabra'] = { label = 'Pé de cabra', weight = 1500, stack = true },
+    ['joia_roubada'] = { label = 'Joia', weight = 100, stack = true },
+    ['relogio_roubado'] = { label = 'Relógio de ouro', weight = 150, stack = true },
+    ['celular_roubado'] = { label = 'Celular roubado', weight = 200, stack = true },
+    ['notebook_roubado'] = { label = 'Notebook roubado', weight = 2000, stack = true },
 }
