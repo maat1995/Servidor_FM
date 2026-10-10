@@ -88,7 +88,7 @@ Config.reparo = {
 -- deixe ele lá (gasta o kit de retífica) e volte quando estiver pronto.
 -- Na máquina dá para ver os motores que estão retificando e os que já estão prontos.
 Config.retifica = {
-    prop = `gr_prop_gr_speeddrill_01a`,
+    prop = `gr_prop_gr_lathe_01c`,
     coords = vec4(-325.42, -119.70, 38.01, 157.5),
     distancia = 2.2,        -- distância para o [E]
     tempo = 300,            -- segundos que o motor fica retificando (5 min)
