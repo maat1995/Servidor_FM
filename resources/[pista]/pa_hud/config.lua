@@ -41,3 +41,27 @@ Config.nomesArvore = {
 -- Componentes nativos do GTA escondidos (a HUD mostra no lugar)
 -- 1 procurado, 3 e 4 dinheiro, 6 nome do veículo, 7 bairro, 8 classe do veículo, 9 rua, 13 troco
 Config.esconderNativos = { 1, 3, 4, 6, 7, 8, 9, 13 }
+
+-- Estresse (veio do qbx_hud). Comida/bebida/cigarro continuam usando hud:server:RelieveStress
+Config.estresse = {
+    ativo = true,
+    policiaSemEstresse = true,     -- polícia (job type leo) não ganha estresse
+    chanceTiro = 0.1,              -- chance de ganhar estresse a cada tiro (0 a 1)
+    velocidade = false,            -- ex.: { semCinto = 140, comCinto = 220 } em km/h; false = não ganha correndo
+    minimoEfeito = 50,             -- a partir daqui a tela começa a embaçar
+    armasSemEstresse = { 'weapon_petrolcan', 'weapon_hazardcan', 'weapon_fireextinguisher' },
+    embacar = {
+        { min = 50, max = 60, tempo = 1500 },
+        { min = 60, max = 70, tempo = 2000 },
+        { min = 70, max = 80, tempo = 2500 },
+        { min = 80, max = 90, tempo = 2700 },
+        { min = 90, max = 100, tempo = 3000 },
+    },
+    intervalo = {
+        { min = 50, max = 60, tempo = 55000 },
+        { min = 60, max = 70, tempo = 45000 },
+        { min = 70, max = 80, tempo = 35000 },
+        { min = 80, max = 90, tempo = 25000 },
+        { min = 90, max = 100, tempo = 17000 },
+    },
+}

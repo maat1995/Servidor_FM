@@ -197,3 +197,10 @@ html, body {
 .acoes button { border-radius: 5px; }
 .acoes button:hover, .grupo button:hover { color: var(--texto); }
 .acoes button.principal { background: var(--ambar); border-color: var(--ambar); color: #412402; }
+
+/* Cinto */
+#cinto { position: absolute; left: 4px; bottom: 64px; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; background: rgba(121, 31, 31, .85); color: #F7C1C1;
+    animation: pisca 1s infinite; }
+#cinto.preso { background: rgba(18, 18, 16, .62); color: var(--verde); animation: none; }
+#cinto svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

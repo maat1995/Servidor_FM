@@ -76,6 +76,7 @@ ensure qbx_core
 ensure ox_target
 ensure [ox]
 ensure [qbx]
+stop qbx_hud # substituido pelo pa_hud
 ensure [standalone]
 ensure [voice]
 ensure [assets]

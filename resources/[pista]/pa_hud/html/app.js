@@ -153,6 +153,11 @@
         if (!v) { vel.classList.add('oculto'); return; }
         vel.classList.remove('oculto');
 
+        const cinto = $('cinto');
+        const temCinto = v.tipo === 'carro' && v.cinto !== undefined;
+        cinto.classList.toggle('oculto', !temCinto);
+        if (temCinto) cinto.classList.toggle('preso', !!v.cinto);
+
         setVelocidade(v.velocidade);
         setRpm(v.rpm);
         $('unidade').textContent = opcoes.unidade === 'mph' ? 'mph' : 'km/h';

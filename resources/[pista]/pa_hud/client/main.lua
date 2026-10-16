@@ -3,6 +3,7 @@
 local KVP = 'pa_hud_opcoes'
 local opcoes = {}
 local ocultoPorScript = false
+local inventarioAberto = false
 local visivelAntes = nil
 local nitroAoVivo = { veh = 0, valor = 0.0, t = 0 }
 local ruaCache = { nome = '', zona = '', t = 0 }
@@ -104,9 +105,9 @@ local function status(ped)
     return {
         vida = limitar(vida),
         colete = limitar(GetPedArmour(ped)),
-        fome = limitar(meta.hunger or 100),
-        sede = limitar(meta.thirst or 100),
-        estresse = limitar(meta.stress or 0),
+        fome = limitar(LocalPlayer.state.hunger or meta.hunger or 100),
+        sede = limitar(LocalPlayer.state.thirst or meta.thirst or 100),
+        estresse = limitar(LocalPlayer.state.stress or meta.stress or 0),
     }
 end
 
@@ -148,6 +149,8 @@ local function veiculo(veh)
 
     if tipo == 'bike' then return d end
 
+    d.cinto = LocalPlayer.state.seatbelt == true or LocalPlayer.state.harness == true
+
     d.gasolina = limitar(Entity(veh).state.fuel or GetVehicleFuelLevel(veh))
     d.temperatura = math.floor(GetVehicleEngineTemperature(veh))
     d.motor = limitar(GetVehicleEngineHealth(veh) / 10.0)
@@ -178,6 +181,7 @@ end
 local function podeMostrar()
     return LocalPlayer.state.isLoggedIn
         and not ocultoPorScript
+        and not inventarioAberto
         and not opcoes.oculto
         and not IsPauseMenuActive()
         and not IsScreenFadedOut()
@@ -278,6 +282,12 @@ RegisterNUICallback('fechar', function(_, cb)
     SetNuiFocus(false, false)
     cb('ok')
 end)
+
+---------------------------------------------------------------------
+RegisterNetEvent('pa_hud:client:inventario', function(aberto) inventarioAberto = aberto == true end)
+-- compatibilidade com scripts feitos para o qbx_hud
+RegisterNetEvent('qbx_hud:client:hideHud', function() ocultoPorScript = true end)
+RegisterNetEvent('qbx_hud:client:showHud', function() ocultoPorScript = false end)
 
 ---------------------------------------------------------------------
 -- Exports: outros scripts podem esconder a HUD (cutscene, câmera, etc.)

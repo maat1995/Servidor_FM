@@ -26,6 +26,7 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Bússola com rua e bairro, indicador de voz (pma-voice) e aviso de XP/nível do pista_skills
   - `/hud`: km/h ou mph, tamanho, bússola, esconder status cheio e modo cinema (salvo no PC do jogador)
   - Outros scripts podem esconder a HUD: `exports.pa_hud:ocultar(true)`
+  - Substitui o qbx_hud (`stop qbx_hud` no server.cfg): estresse (tiro, tela embaçada), indicador de cinto, `/banco` e `/dinheiro`
 - `resources/[pista]/pa_cambio` — câmbio manual
   - Todo carro sai **manual**: liga em neutro (N), **Shift** sobe e **Ctrl** desce (N → Shift = 1ª, N → Ctrl = ré)
   - Em N o motor acelera mas o carro não anda; desligou ou saiu do carro, volta para N
