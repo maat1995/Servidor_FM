@@ -139,7 +139,9 @@ local function veiculo(veh)
         d.marcha = math.floor(GetEntityHeightAboveGround(veh))
     else
         local m = GetVehicleCurrentGear(veh)
-        if not ligado then d.marcha = '-'
+        local manual = GetResourceState('pa_cambio') == 'started' and exports.pa_cambio:marcha(veh)
+        if manual then d.marcha = manual -- câmbio manual: N, R, 1, 2...
+        elseif not ligado then d.marcha = '-'
         elseif m == 0 then d.marcha = 'R'
         else d.marcha = tostring(m) end
     end

@@ -5,7 +5,7 @@ lua54 'yes'
 name 'pa_hud'
 author 'Pista & Asfalto RP'
 description 'HUD do servidor: velocímetro com turbo, nitro e motor (pista_tuning), status, bússola, voz e XP (pista_skills)'
-version '1.0.0'
+version '1.0.1'
 
 shared_scripts {
     '@ox_lib/init.lua',

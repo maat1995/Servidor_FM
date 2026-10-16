@@ -369,7 +369,10 @@ local function validarPecaExterna(source, netId, itemName)
     if Config.pecasExternasSoNaOficina and not naOficina(GetEntityCoords(veh), source) then
         return nil, 'Isso só pode ser feito dentro da oficina'
     end
-    err = exigirCarroProprio(source, placaDo(veh)) or exigirHab(source, peca.habilidade)
+    err = exigirCarroProprio(source, placaDo(veh))
+    if not err and not (peca.qualquerMecanico and mecanicoEmServico(source)) then
+        err = exigirHab(source, peca.habilidade)
+    end
     if err then return nil, err end
     if exports.ox_inventory:Search(source, 'count', itemName) < 1 then
         return nil, ('Você não tem %s'):format(peca.label)
@@ -417,7 +420,10 @@ lib.callback.register('pista_tuning:server:remover', function(source, netId, slo
     local veh, err = pegarVeiculo(source, netId, false)
     if not veh then return false, err end
     if slotEhDoMotor(slot) then return false, 'Essa peça é do motor: tire o motor e abra ele' end
-    err = exigirHab(source, 'fundamentos') or exigirCarroProprio(source, placaDo(veh))
+    err = exigirCarroProprio(source, placaDo(veh))
+    if not err and not (slot == 'automatico' and mecanicoEmServico(source)) then
+        err = exigirHab(source, slot == 'automatico' and 'cambio' or 'fundamentos')
+    end
     if err then return false, err end
     if slot ~= 'chip' then
         err = exigirFerramenta(source, 'soquetes')

@@ -329,6 +329,7 @@ end)
 -- Menu "Ver preparação" (olho do ox_target no carro)
 ---------------------------------------------------------------------
 function TextoSlot(slot, valor)
+    if slot == 'automatico' then return valor and 'Automático' or 'Manual (original)' end
     if valor == nil or valor == false then return 'Original' end
     if slot == 'chip' then return ('Stage %d'):format(valor) end
     if slot == 'cabecote' then return valor == 2 and 'De corrida' or 'Retrabalhado' end

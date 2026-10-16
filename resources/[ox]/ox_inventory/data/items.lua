@@ -752,6 +752,11 @@ return {
         description = 'Freio de pista. Instale nas 4 rodas no elevador.',
         client = { export = 'pista_tuning.usarFreio' },
     },
+    ['cambio_automatico'] = {
+        label = 'Câmbio automático', weight = 15000, stack = true, close = true,
+        description = 'Troca o câmbio manual de fábrica pelo automático. Instale com o jogo de soquetes (capô aberto).',
+        client = { export = 'pista_tuning.usarPeca' },
+    },
     ['cambio_rua'] = {
         label = 'Transmissão de rua', weight = 15000, stack = true, close = true,
         description = 'Instale com o jogo de soquetes, em qualquer lugar (capô aberto).',

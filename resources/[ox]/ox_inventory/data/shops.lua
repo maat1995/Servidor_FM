@@ -32,6 +32,7 @@ return {
 			{ name = 'cambio_rua', price = 1 },
 			{ name = 'cambio_esportivo', price = 1 },
 			{ name = 'cambio_competicao', price = 1 },
+			{ name = 'cambio_automatico', price = 1 },
 			{ name = 'suspensao_regulavel', price = 1 },
 			{ name = 'pneu', price = 1 },
 			{ name = 'macaco', price = 1 },

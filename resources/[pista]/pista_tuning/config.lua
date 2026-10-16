@@ -339,6 +339,12 @@ Config.itens = {
         label = 'Kit de nitro', slot = 'nitro', valor = true,
         habilidade = 'nitro', tempo = 20000, xp = 35,
     },
+    -- Todo carro sai manual (pa_cambio). O automático é instalado pelo mecânico.
+    -- qualquerMecanico = mecânico em serviço (qualquer cargo) instala sem a habilidade
+    cambio_automatico = {
+        label = 'Câmbio automático', slot = 'automatico', valor = true,
+        habilidade = 'cambio', qualquerMecanico = true, tempo = 20000, xp = 20,
+    },
 }
 
 -- Ordem e nome dos slots no menu "Ver preparação"
@@ -351,6 +357,7 @@ Config.slots = {
     { id = 'junta',       label = 'Junta do cabeçote' },
     { id = 'bielas',      label = 'Bielas' },
     { id = 'nitro',       label = 'Nitro' },
+    { id = 'automatico',  label = 'Câmbio' },
 }
 
 ---------------------------------------------------------------------
