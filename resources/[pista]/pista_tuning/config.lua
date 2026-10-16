@@ -471,7 +471,7 @@ Config.remap = {
 -- NITRO
 ---------------------------------------------------------------------
 Config.nitro = {
-    tecla = 'LSHIFT',          -- o jogador pode trocar em Configurações > Atalhos > FiveM
+    tecla = 'LMENU',           -- Alt esquerdo (Shift é do câmbio manual); o jogador pode trocar em Configurações > Atalhos > FiveM
     potencia = 2.0,            -- multiplicador de força enquanto aperta
     consumoPorSegundo = 20.0,  -- 100 de carga = 5 segundos de nitro
     cargaGarrafa = 100.0,
