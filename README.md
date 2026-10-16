@@ -33,7 +33,17 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Câmbio automático é peça (`cambio_automatico`, autopeças) instalada pelo mecânico; tirar volta para o manual
   - Viaturas/ambulâncias (classe emergência), modelos de emprego e polícia/SAMU em serviço ficam automáticos
   - Teclas trocáveis em Configurações > Atalhos > FiveM; marcha (N/R/1…) aparece na pa_hud
+- `resources/[pista]/pa_medico` — desmaio e resgate (SAMU)
+  - Caiu (qbx_medical): começa a contar o tempo de desmaio (`Config.tempoDesmaiado`, 5 min)
+  - **G** chama o SAMU: os médicos em serviço recebem um alerta com a **área aproximada** do corpo (círculo no mapa, não o ponto exato)
+  - Celular: ligar para **192** no NPWD faz o mesmo; quem liga bem chama para a própria posição (amigo caído do lado)
+  - Médico assume com **Y** no aviso ou pelo `/chamados` (GPS na área); o paciente vê quem está a caminho
+  - Médico reanima/trata pelo olho (ox_target) usando o kit e a bandagem do qbx_ambulancejob
+  - Sem médico em serviço: vem uma **ambulância NPC** de sirene, o socorrista faz massagem cardíaca e reanima (cobra `Config.npc.preco`)
+  - Tempo acabou: **segurar E** acorda no hospital **perdendo tudo** (inventário limpo + internação do qbx_ambulancejob); antes disso o servidor bloqueia
+  - Ninguém é mandado para o hospital sozinho: enquanto não segurar E, um médico ainda pode chegar
 - `resources/[ox]/ox_inventory` — itens, autopeças do mecânico e ícones
+- `resources/[qbx]/qbx_ambulancejob` — versão oficial com um ajuste: com o pa_medico ligado ele não manda alerta automático nem desenha a tela de morte
 - `resources/[qbx]/qbx_customs` — desempenho restrito a quem tem skill/mecânico
 - `server.cfg.example` — configuração do servidor **sem** chave e senha
 

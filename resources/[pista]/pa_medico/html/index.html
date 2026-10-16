@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>pa_medico</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="tela" class="oculto">
+        <div id="vinheta"></div>
+        <div id="cartao">
+            <div id="titulo">
+                <span id="pulso"></span>
+                <span id="titulo-texto">DESMAIADO</span>
+            </div>
+
+            <div id="relogio">5:00</div>
+            <div id="relogio-legenda">Acordar no hospital libera em</div>
+
+            <div id="status" class="oculto">
+                <span id="status-icone"></span>
+                <span id="status-texto"></span>
+            </div>
+            <div id="rcp" class="oculto"><div id="rcp-barra"></div></div>
+
+            <div id="teclas">
+                <div class="tecla" id="tecla-chamar">
+                    <kbd>G</kbd><span id="texto-chamar">Chamar o SAMU</span>
+                </div>
+                <div class="tecla bloqueada" id="tecla-hospital">
+                    <kbd>E</kbd><span id="texto-hospital">Segure para acordar no hospital (perde tudo)</span>
+                    <div id="segurar"><div id="segurar-barra"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
