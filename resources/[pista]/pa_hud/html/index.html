@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>pa_hud</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="hud" class="oculto">
+
+        <div id="bussola" class="bloco">
+            <div id="direcoes"></div>
+            <div id="rua"><span id="rua-nome"></span><span id="rua-zona"></span></div>
+        </div>
+
+        <div id="status" class="bloco">
+            <div class="item" id="st-vida" data-cor="vida">
+                <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+                <div class="barra"><i></i></div>
+            </div>
+            <div class="item" id="st-colete" data-cor="colete">
+                <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>
+                <div class="barra"><i></i></div>
+            </div>
+            <div class="item" id="st-fome" data-cor="fome">
+                <svg viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1-3 4-3 7h3v11M16 3v18"/></svg>
+                <div class="barra"><i></i></div>
+            </div>
+            <div class="item" id="st-sede" data-cor="sede">
+                <svg viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>
+                <div class="barra"><i></i></div>
+            </div>
+            <div class="item" id="st-estresse" data-cor="estresse">
+                <svg viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
+                <div class="barra"><i></i></div>
+            </div>
+            <div id="voz">
+                <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+                <span class="nivel"><b></b><b></b><b></b></span>
+            </div>
+        </div>
+
+        <div id="velocimetro" class="bloco">
+            <div id="alerta-motor" class="oculto">
+                <svg viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4M12 17v.5"/></svg>
+                <span id="alerta-texto">Motor danificado</span>
+            </div>
+            <svg id="giro" viewBox="0 0 180 180">
+                <circle class="trilha" cx="90" cy="90" r="72"/>
+                <circle id="giro-vermelho" cx="90" cy="90" r="72"/>
+                <circle id="giro-valor" cx="90" cy="90" r="72"/>
+                <g id="giro-marcas"></g>
+                <text id="vel" x="90" y="92"></text>
+                <text id="unidade" x="90" y="109">km/h</text>
+                <text id="marcha" x="90" y="146">-</text>
+                <text id="marcha-rotulo" x="90" y="164">RPM x1000</text>
+            </svg>
+            <div id="infos">
+                <div class="info" id="in-turbo"><span class="rot">Turbo</span><span class="val"></span><div class="mini"><i></i></div></div>
+                <div class="info" id="in-nitro"><span class="rot">Nitro</span><span class="val"></span><div class="mini"><i></i></div></div>
+                <div class="info" id="in-gas"><span class="rot">Gasolina</span><span class="val"></span><div class="mini"><i></i></div></div>
+                <div class="info" id="in-motor"><span class="rot">Motor</span><span class="val"></span><div class="mini"><i></i></div></div>
+            </div>
+        </div>
+
+        <div id="avisos"></div>
+    </div>
+
+    <div id="opcoes" class="oculto">
+        <div class="painel">
+            <h1>HUD</h1>
+            <div class="linha">
+                <span>Velocidade</span>
+                <div class="grupo">
+                    <button data-unidade="kmh">km/h</button>
+                    <button data-unidade="mph">mph</button>
+                </div>
+            </div>
+            <div class="linha">
+                <span>Tamanho <b id="escala-val">100%</b></span>
+                <input type="range" id="op-escala" min="70" max="130" step="5">
+            </div>
+            <label class="linha check"><span>Bússola e nome da rua</span><input type="checkbox" id="op-bussola"></label>
+            <label class="linha check"><span>Esconder fome, sede e colete cheios</span><input type="checkbox" id="op-cheio"></label>
+            <label class="linha check"><span>Modo cinema (esconde a HUD)</span><input type="checkbox" id="op-oculto"></label>
+            <div class="acoes">
+                <button id="op-fechar">Fechar</button>
+                <button id="op-salvar" class="principal">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

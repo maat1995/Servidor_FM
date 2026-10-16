@@ -45,6 +45,7 @@ local function usarNitro()
             ultimo = agora
 
             SetVehicleCheatPowerIncrease(veh, Config.nitro.potencia)
+            TriggerEvent('pista_tuning:client:nitro', veh, math.max(0.0, carga - gasto)) -- pa_hud
             if Config.nitro.efeitoEscapamento and agora - ultimaChama > 120 then
                 ultimaChama = agora
                 chamaEscapamento(veh)

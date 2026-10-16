@@ -283,6 +283,7 @@ local function somarXP(source, arvore, qtd, motivo, ignorarLimite)
     else
         avisar(source, ('+%d XP de %s%s'):format(qtd, nome:lower(), motivo and (' (' .. motivo .. ')') or ''))
     end
+    TriggerClientEvent('pista_skills:client:ganhouXP', source, arvore, qtd, motivo) -- pa_hud
     atualizarCliente(source)
     return qtd
 end

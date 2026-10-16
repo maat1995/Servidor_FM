@@ -19,6 +19,13 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
     e `exports.pista_skills:registrarTempo(source, 'pista', ms)` para time attack
   - Anti-farm: peça repetida no mesmo carro não dá XP, cooldowns por carro e limite diário
   - Ferramentas com desgaste (jogo de soquetes, torquímetro)
+- `resources/[pista]/pa_hud` — HUD do servidor
+  - Velocímetro com conta-giros, marcha, turbo (pressão do remap), nitro, gasolina e temperatura/vida do motor
+  - Turbo e nitro só aparecem se a peça estiver instalada (pista_tuning); alerta de motor danificado, superaquecendo ou fora
+  - Status (vida, colete, fome, sede, estresse) alinhados ao minimapa; fome/sede/colete somem quando cheios
+  - Bússola com rua e bairro, indicador de voz (pma-voice) e aviso de XP/nível do pista_skills
+  - `/hud`: km/h ou mph, tamanho, bússola, esconder status cheio e modo cinema (salvo no PC do jogador)
+  - Outros scripts podem esconder a HUD: `exports.pa_hud:ocultar(true)`
 - `resources/[ox]/ox_inventory` — itens, autopeças do mecânico e ícones
 - `resources/[qbx]/qbx_customs` — desempenho restrito a quem tem skill/mecânico
 - `server.cfg.example` — configuração do servidor **sem** chave e senha
