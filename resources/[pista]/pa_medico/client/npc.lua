@@ -54,6 +54,32 @@ local function limpar(irEmbora)
     end)
 end
 
+---Coloca o socorrista ajoelhado ao lado do peito do jogador, virado para ele.
+---O eixo do corpo vem dos ossos (cabeça -> quadril), porque a animação de
+---caído gira o corpo e o heading da entidade não diz para onde ele está deitado.
+function PosicionarParaRCP(ped)
+    local peito = GetPedBoneCoords(cache.ped, 24817, 0.0, 0.0, 0.0)   -- SKEL_Spine2
+    local cabeca = GetPedBoneCoords(cache.ped, 31086, 0.0, 0.0, 0.0)  -- SKEL_Head
+    local quadril = GetPedBoneCoords(cache.ped, 11816, 0.0, 0.0, 0.0) -- SKEL_Pelvis
+
+    local eixo = vec2(cabeca.x - quadril.x, cabeca.y - quadril.y)
+    if #eixo < 0.05 then eixo = vec2(0.0, 1.0) end
+    eixo = eixo / #eixo
+    local lado = vec2(-eixo.y, eixo.x)
+
+    -- Usa o lado do corpo onde o socorrista já está (não atravessa o paciente)
+    local atual = GetEntityCoords(ped)
+    if (atual.x - peito.x) * lado.x + (atual.y - peito.y) * lado.y < 0 then lado = -lado end
+
+    local distancia = Config.npc.distanciaRCP or 0.55
+    local x, y = peito.x + lado.x * distancia, peito.y + lado.y * distancia
+    local achou, chao = GetGroundZFor_3dCoord(x, y, peito.z + 1.0, false)
+    local z = achou and chao or (GetEntityCoords(cache.ped).z - 1.0)
+
+    SetEntityCoordsNoOffset(ped, x, y, z, false, false, false)
+    SetEntityHeading(ped, GetHeadingFromVector_2d(peito.x - x, peito.y - y))
+end
+
 function CancelarAmbulanciaNpc()
     if not ativo then return end
     cancelado = true
@@ -62,7 +88,7 @@ end
 local function falhou()
     limpar(false)
     lib.callback.await('pa_medico:server:npcCancelar', false)
-    Desmaio.npc, Desmaio.status, Desmaio.progressoNpc = false, nil, nil
+    Desmaio.npc, Desmaio.status, Desmaio.progressoNpc, Desmaio.npcChegou = false, nil, nil, false
     lib.notify({ type = 'error', description = 'A ambulância não conseguiu chegar. Tente chamar de novo.' })
     ativo = false
 end
@@ -151,13 +177,13 @@ function IniciarAmbulanciaNpc()
             SetEntityCoords(socorrista, frente.x, frente.y, frente.z - 1.0, false, false, false, false)
         end
 
-        -- Massagem cardíaca
+        -- Massagem cardíaca: ajoelha encostado no peito, de frente para o corpo
         ClearPedTasks(socorrista)
-        TaskTurnPedToFaceEntity(socorrista, cache.ped, 1000)
-        Wait(1000)
         lib.requestAnimDict('mini@cpr@char_a@cpr_str')
+        PosicionarParaRCP(socorrista)
         TaskPlayAnim(socorrista, 'mini@cpr@char_a@cpr_str', 'cpr_pumpchest', 8.0, -8.0, -1, 1, 0, false, false, false)
 
+        Desmaio.npcChegou = true
         Desmaio.status = Config.textos.ambulanciaChegou
         local inicio = GetGameTimer()
         local duracao = Config.npc.tempoRCP * 1000

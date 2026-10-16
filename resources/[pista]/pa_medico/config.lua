@@ -63,6 +63,7 @@ Config.npc = {
     distanciaSaida = 180.0,     -- a ambulância nasce numa rua a essa distância
     tempoMaxViagem = 90,        -- se não chegar nesse tempo, aparece perto do corpo
     tempoRCP = 10,              -- segundos de massagem cardíaca antes de reanimar
+    distanciaRCP = 0.55,        -- distância do socorrista até o peito (ajuste se ficar longe ou dentro do corpo)
     sirene = true,
 }
 

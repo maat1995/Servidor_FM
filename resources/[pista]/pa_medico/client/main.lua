@@ -13,6 +13,7 @@ Desmaio = {
     status = nil,        -- texto de status (chamado, médico a caminho, ambulância...)
     npc = false,
     progressoNpc = nil,  -- 0..1 durante a massagem cardíaca
+    npcChegou = false,   -- socorrista NPC já está no corpo
 }
 
 local function desmaiado()
@@ -31,7 +32,8 @@ local function sincronizar()
     Desmaio.fim = GetGameTimer() + info.restante * 1000
     Desmaio.npc = info.npc
     if info.npc then
-        Desmaio.status = Config.textos.ambulanciaNpc
+        -- Não volta para "a caminho" se o socorrista já chegou
+        if not Desmaio.npcChegou then Desmaio.status = Config.textos.ambulanciaNpc end
     elseif info.medico then
         Desmaio.status = Config.textos.medicoACaminho:format(info.medico)
     elseif info.chamou then
@@ -113,7 +115,7 @@ local function laco()
 
     -- Quem decide quando pode ir para o hospital é o pa_medico
     exports.qbx_medical:DisableRespawn()
-    Desmaio.status, Desmaio.npc, Desmaio.progressoNpc = nil, false, nil
+    Desmaio.status, Desmaio.npc, Desmaio.progressoNpc, Desmaio.npcChegou = nil, false, nil, false
     Desmaio.fim = GetGameTimer() + Config.tempoDesmaiado * 1000
     sincronizar()
 
@@ -174,7 +176,7 @@ local function laco()
     end
 
     nui({ acao = 'esconder' })
-    Desmaio.status, Desmaio.npc, Desmaio.progressoNpc = nil, false, nil
+    Desmaio.status, Desmaio.npc, Desmaio.progressoNpc, Desmaio.npcChegou = nil, false, nil, false
     exports.qbx_medical:AllowRespawn()
     if CancelarAmbulanciaNpc then CancelarAmbulanciaNpc() end
     rodando = false
