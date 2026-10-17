@@ -77,7 +77,9 @@ ensure ox_target
 ensure [ox]
 ensure [qbx]
 stop qbx_hud # substituido pelo pa_hud
+stop qbx_police # substituido pelo pa_policia (LSPD)
 ensure [standalone]
+stop xt-prison # substituido pela prisao do pa_policia
 ensure [voice]
 ensure [assets]
 

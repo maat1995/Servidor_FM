@@ -33,6 +33,7 @@ return {
 			{ name = 'cambio_esportivo', price = 1 },
 			{ name = 'cambio_competicao', price = 1 },
 			{ name = 'cambio_automatico', price = 1 },
+			{ name = 'painel_digital', price = 1 },
 			{ name = 'suspensao_regulavel', price = 1 },
 			{ name = 'pneu', price = 1 },
 			{ name = 'macaco', price = 1 },
@@ -40,6 +41,8 @@ return {
 			{ name = 'kit_retifica', price = 1 },
 			{ name = 'jogo_pistoes', price = 1 },
 			{ name = 'jogo_bielas', price = 1 },
+			{ name = 'cabecote_original', price = 1 },
+			{ name = 'junta_original', price = 1 },
 			{ name = 'repairkit', price = 1 },
 			{ name = 'advancedrepairkit', price = 1 },
 		}, locations = {
@@ -136,7 +139,7 @@ return {
 			id = 110, colour = 69, scale = 0.8
 		}, inventory = {
 			{ name = 'ammo-9', price = 5, },
-			{ name = 'WEAPON_KNIFE', price = 200 },
+			-- WEAPON_KNIFE removida: faca só na loja de caça com licença (pa_caca)
 			{ name = 'WEAPON_BAT', price = 100 },
 			{ name = 'WEAPON_PISTOL', price = 1000, metadata = { registered = true }, license = 'weapon' }
 		}, locations = {
@@ -162,25 +165,7 @@ return {
 		}
 	},
 
-	PoliceArmoury = {
-		name = 'Police Armoury',
-		groups = shared.police,
-		blip = {
-			id = 110, colour = 84, scale = 0.8
-		}, inventory = {
-			{ name = 'ammo-9', price = 5, },
-			{ name = 'ammo-rifle', price = 5, },
-			{ name = 'WEAPON_FLASHLIGHT', price = 200 },
-			{ name = 'WEAPON_NIGHTSTICK', price = 100 },
-			{ name = 'WEAPON_PISTOL', price = 500, metadata = { registered = true, serial = 'POL' }, license = 'weapon' },
-			{ name = 'WEAPON_CARBINERIFLE', price = 1000, metadata = { registered = true, serial = 'POL' }, license = 'weapon', grade = 3 },
-			{ name = 'WEAPON_STUNGUN', price = 500, metadata = { registered = true, serial = 'POL'} }
-		}, locations = {
-			vec3(451.51, -979.44, 30.68)
-		}, targets = {
-			{ loc = vec3(453.21, -980.03, 30.68), length = 0.5, width = 3.0, heading = 270.0, minZ = 30.5, maxZ = 32.0, distance = 6 }
-		}
-	},
+	-- PoliceArmoury: agora é o arsenal do pa_policia (por patente)
 
 	Medicine = {
 		name = 'Medicine Cabinet',

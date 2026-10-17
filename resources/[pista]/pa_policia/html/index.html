@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>pa_policia</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- TABLET (MDT) -->
+    <div id="mdt" class="oculto">
+        <div id="moldura">
+            <aside id="lado">
+                <div id="marca">
+                    <div id="escudo">LSPD</div>
+                    <div>
+                        <div id="marca-titulo">Tablet policial</div>
+                        <div id="marca-sub">Los Santos Police Department</div>
+                    </div>
+                </div>
+                <nav id="abas">
+                    <button data-aba="inicio" class="ativa">Início</button>
+                    <button data-aba="pessoas">Pessoas</button>
+                    <button data-aba="veiculos">Veículos</button>
+                    <button data-aba="bos">Boletins (BO)</button>
+                    <button data-aba="mandados">Mandados</button>
+                    <button data-aba="codigo">Código penal</button>
+                    <button data-aba="evidencias">Apreensões e perícia</button>
+                    <button data-aba="equipe">Equipe</button>
+                </nav>
+                <div id="eu">
+                    <div id="eu-nome">—</div>
+                    <div id="eu-patente">—</div>
+                </div>
+            </aside>
+
+            <main id="conteudo">
+                <header id="topo">
+                    <h1 id="titulo-aba">Início</h1>
+                    <div id="relogio"></div>
+                    <button id="fechar" title="Fechar (Esc)">✕</button>
+                </header>
+                <section id="pagina"></section>
+            </main>
+        </div>
+
+        <!-- janela modal -->
+        <div id="modal" class="oculto">
+            <div id="modal-caixa">
+                <h2 id="modal-titulo"></h2>
+                <div id="modal-corpo"></div>
+                <div id="modal-botoes"></div>
+            </div>
+        </div>
+
+        <div id="toast" class="oculto"></div>
+    </div>
+
+    <!-- RADAR MÓVEL -->
+    <div id="radar" class="oculto">
+        <div class="radar-cab">RADAR LSPD <span id="radar-propria">0</span> km/h</div>
+        <div class="radar-linha">
+            <div class="radar-lado">FRENTE</div>
+            <div class="radar-vel" id="radar-f-vel">--</div>
+            <div class="radar-placa" id="radar-f-placa">--------</div>
+            <div class="radar-modelo" id="radar-f-modelo"></div>
+        </div>
+        <div class="radar-linha">
+            <div class="radar-lado">TRÁS</div>
+            <div class="radar-vel" id="radar-t-vel">--</div>
+            <div class="radar-placa" id="radar-t-placa">--------</div>
+            <div class="radar-modelo" id="radar-t-modelo"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -344,6 +344,7 @@ end)
 -- EXPORTS
 ---------------------------------------------------------------------
 exports('EstaDesmaiado', estaDesmaiado)
+exports('ChamarSamu', chamarPorDesmaiado) -- usado pelo botão de pânico do pa_policia
 exports('TempoRestante', function(src)
     local d = desmaiados[src]
     return d and math.max(0, d.fim - os.time()) or 0

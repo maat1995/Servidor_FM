@@ -245,7 +245,7 @@ return {
     },
 
     ['electronickit'] = {
-        label = 'Electronic Kit',
+        label = 'Kit eletrônico',
         weight = 500,
     },
 
@@ -492,7 +492,7 @@ return {
     },
 
     ['trojan_usb'] = {
-        label = 'Trojan USB',
+        label = 'Pendrive trojan',
         weight = 100,
     },
 
@@ -517,12 +517,12 @@ return {
     },
 
     ['drill'] = {
-        label = 'Drill',
+        label = 'Furadeira',
         weight = 5000,
     },
 
     ['thermite'] = {
-        label = 'Thermite',
+        label = 'Termita',
         weight = 1000,
     },
 
@@ -617,13 +617,16 @@ return {
     },
 
     ['empty_evidence_bag'] = {
-        label = 'Empty Evidence Bag',
-        weight = 200,
+        label = 'Saco de evidência (vazio)',
+        weight = 50,
+        description = 'Perícia da LSPD: coletar cápsulas, sangue e digitais.',
     },
 
     ['filled_evidence_bag'] = {
-        label = 'Filled Evidence Bag',
-        weight = 200,
+        label = 'Saco de evidência',
+        weight = 100,
+        stack = false,
+        description = 'Evidência coletada. Analise no laboratório da DP.',
     },
 
     ['harness'] = {
@@ -632,7 +635,7 @@ return {
     },
 
     ['handcuffs'] = {
-        label = 'Handcuffs',
+        label = 'Algema',
         weight = 200,
     },
 
@@ -860,6 +863,9 @@ return {
     ['celular_roubado'] = { label = 'Celular roubado', weight = 200, stack = true },
     ['notebook_roubado'] = { label = 'Notebook roubado', weight = 2000, stack = true },
 
+    -- pa_policia
+    ['porte_arma'] = { label = 'Porte de arma', weight = 0, stack = false, close = true, description = 'Emitido pela LSPD.' },
+
     -- pa_caca
     ['licenca_caca'] = { label = 'Licença de Caça', weight = 0, stack = false, close = true, description = 'Emitida pela polícia. Válida por 30 dias.' },
 
@@ -936,4 +942,17 @@ return {
     ['desfibrilador'] = { label = 'Desfibrilador', weight = 3000, stack = false, close = true, description = 'Reanima na rua (não gasta). Precisa de adrenalina.' },
     ['adrenalina']    = { label = 'Adrenalina',    weight = 100,  stack = true,  close = true, description = 'Gasta 1 por reanimação na rua.' },
     ['kit_trauma']    = { label = 'Kit de trauma', weight = 1500, stack = true,  close = true, description = 'Tratamento na rua: vida até 100% e ferimentos leves e moderados.' },
+
+    -- pa_roubo_* (ferramentas saem da bancada clandestina do pa_bitcoin)
+    ['blueprint_furadeira']      = { label = 'Blueprint: furadeira',       weight = 50, stack = false, close = true, client = { export = 'pa_bitcoin.usarBlueprint' } },
+    ['blueprint_trojan']         = { label = 'Blueprint: pendrive trojan', weight = 50, stack = false, close = true, client = { export = 'pa_bitcoin.usarBlueprint' } },
+    ['blueprint_kit_eletronico'] = { label = 'Blueprint: kit eletrônico',  weight = 50, stack = false, close = true, client = { export = 'pa_bitcoin.usarBlueprint' } },
+    ['bilhete_cofre']            = { label = 'Bilhete com código',         weight = 10, stack = false, close = true, description = 'Código do cofre de uma loja.' },
+
+    -- pa_meta / pa_meta_insumos
+    ['acetona']        = { label = 'Acetona',        weight = 500, stack = true, description = 'Solvente. Ingrediente da meta.' },
+    ['pseudoefedrina'] = { label = 'Pseudoefedrina', weight = 200, stack = true, description = 'Remédio controlado. Ingrediente da meta.' },
+    ['amonia']         = { label = 'Amônia',         weight = 500, stack = true, description = 'Produto de limpeza. Ingrediente da meta.' },
+    ['mascara_gas']    = { label = 'Máscara de gás', weight = 800, stack = false, consume = 0, client = { export = 'pa_meta.mascara' } },
+    ['meta']           = { label = 'Meta',           weight = 50,  stack = true },
 }

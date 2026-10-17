@@ -47,6 +47,15 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Sem médico em serviço: vem uma **ambulância NPC** de sirene, o socorrista faz massagem cardíaca e reanima (cobra `Config.npc.preco`)
   - Tempo acabou: **segurar E** acorda no hospital **perdendo tudo** (inventário limpo + internação do qbx_ambulancejob); antes disso o servidor bloqueia
   - Ninguém é mandado para o hospital sozinho: enquanto não segurar E, um médico ainda pode chegar
+- `resources/[pista]/pa_policia` — polícia da LSPD (substitui o qbx_police e o xt-prison)
+  - 7 patentes (Cadete, Oficial 1 e 2, Sargento, Tenente, Diretor, Chefe), cada uma libera ações (`Config.permissoes`)
+  - Bater ponto na DP de Mission Row, arsenal por patente, armário pessoal, garagem de viaturas e vestiário
+  - Central de alertas para os outros scripts (`exports.pa_policia:alerta`): área aproximada no mapa, **Y** assume, `/ocorrencias`, botão de pânico e **190** no celular
+  - Abordagem no olho: algemar (atrás ou à frente), conduzir, viatura, revista e apreensão (ilegais, dinheiro sujo, armas sem porte vão para o depósito de evidências); **X** = mãos para cima
+  - Tablet (**F5**): fichas, multas, código penal (o Chefe edita), BO, mandados (busca no pa_casas e prisão), licença de caça e porte, placas procuradas, equipe e caixa da LSPD
+  - Prisão em Bolingbroke: pena em meses (1 mês = 1 min on-line), pertences devolvidos na saída, trabalhos reduzem a pena, fuga gera alerta e mandado
+  - Fiscalização: blitz com cones/barreiras/tapete de pregos, vistoria das peças do pista_tuning (laudo do dinamômetro vale como vistoria), radares fixos com ANPR, radar móvel e pátio (comum ou retido) com o guincho
+  - Perícia: cápsulas com número de série, sangue e digitais no volante; coleta com saco de evidência e laudo no laboratório da DP
 - `resources/[ox]/ox_inventory` — itens, autopeças do mecânico e ícones
 - `resources/[qbx]/qbx_ambulancejob` — versão oficial com um ajuste: com o pa_medico ligado ele não manda alerta automático nem desenha a tela de morte
 - `resources/[qbx]/qbx_customs` — desempenho restrito a quem tem skill/mecânico
