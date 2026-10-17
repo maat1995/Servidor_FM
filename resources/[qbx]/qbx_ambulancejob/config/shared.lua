@@ -23,6 +23,9 @@ return {
                 inventory = {
                     { name = 'radio', price = 0 },
                     { name = 'bandage', price = 0 },
+                    { name = 'desfibrilador', price = 0 }, -- pa_medico
+                    { name = 'adrenalina', price = 0 },    -- pa_medico
+                    { name = 'kit_trauma', price = 0 },    -- pa_medico
                     { name = 'painkillers', price = 0 },
                     { name = 'firstaid', price = 0 },
                     { name = 'weapon_flashlight', price = 0 },

@@ -68,6 +68,39 @@ Config.npc = {
 }
 
 ---------------------------------------------------------------------
+-- ATENDIMENTO DO MÉDICO (olho no paciente > "Atender paciente")
+---------------------------------------------------------------------
+-- A ficha mostra estado, vida, sangramento e ferimentos de cada parte do corpo.
+-- Ferimentos: 1 Leve, 2 Moderado, 3 Grave, 4 Crítico (qbx_medical).
+--  * NA RUA precisa de itens e só trata ferimentos leves/moderados.
+--  * NO HOSPITAL não gasta item e cura tudo (inclusive grave/crítico).
+-- Vida em % (0 = quase morrendo, 100 = cheia).
+
+Config.atendimento = {
+    distancia = 3.0,        -- distância máxima do paciente
+    itens = {
+        desfibrilador = 'desfibrilador',  -- não gasta; precisa ter para reanimar na rua
+        adrenalina = 'adrenalina',        -- gasta 1 por reanimação na rua
+        bandagem = 'bandage',             -- gasta 1; estanca o sangramento
+        trauma = 'kit_trauma',            -- gasta 1; tratamento na rua
+    },
+
+    reanimar = { duracao = 10, vida = 25 },          -- acorda com 25% de vida
+    bandagem = { duracao = 5, vida = 10, sangramento = 1 },  -- +10% e tira 1 nível de sangramento
+    trauma = { duracao = 12, vida = 100 },            -- vida até 100%, ferimentos leves/moderados e sangramento leve
+
+    hospital = {
+        locais = {  -- mesmos hospitais do qbx_ambulancejob
+            { nome = 'Pillbox', coords = vec3(326.0, -585.0, 43.3), raio = 60.0 },
+            { nome = 'Paleto', coords = vec3(-250.0, 6318.0, 32.4), raio = 40.0 },
+        },
+        reanimar = { duracao = 8, vida = 50 },
+        tratamento = { duracao = 15 },   -- cura tudo e vida 100%
+        preco = 0,                       -- cobrado do paciente no tratamento do hospital (0 = grátis)
+    },
+}
+
+---------------------------------------------------------------------
 -- TEXTOS
 ---------------------------------------------------------------------
 Config.textos = {

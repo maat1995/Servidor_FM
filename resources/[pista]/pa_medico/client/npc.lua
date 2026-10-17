@@ -57,10 +57,11 @@ end
 ---Coloca o socorrista ajoelhado ao lado do peito do jogador, virado para ele.
 ---O eixo do corpo vem dos ossos (cabeça -> quadril), porque a animação de
 ---caído gira o corpo e o heading da entidade não diz para onde ele está deitado.
-function PosicionarParaRCP(ped)
-    local peito = GetPedBoneCoords(cache.ped, 24817, 0.0, 0.0, 0.0)   -- SKEL_Spine2
-    local cabeca = GetPedBoneCoords(cache.ped, 31086, 0.0, 0.0, 0.0)  -- SKEL_Head
-    local quadril = GetPedBoneCoords(cache.ped, 11816, 0.0, 0.0, 0.0) -- SKEL_Pelvis
+function PosicionarParaRCP(ped, paciente)
+    paciente = paciente or cache.ped
+    local peito = GetPedBoneCoords(paciente, 24817, 0.0, 0.0, 0.0)   -- SKEL_Spine2
+    local cabeca = GetPedBoneCoords(paciente, 31086, 0.0, 0.0, 0.0)  -- SKEL_Head
+    local quadril = GetPedBoneCoords(paciente, 11816, 0.0, 0.0, 0.0) -- SKEL_Pelvis
 
     local eixo = vec2(cabeca.x - quadril.x, cabeca.y - quadril.y)
     if #eixo < 0.05 then eixo = vec2(0.0, 1.0) end
@@ -74,7 +75,7 @@ function PosicionarParaRCP(ped)
     local distancia = Config.npc.distanciaRCP or 0.55
     local x, y = peito.x + lado.x * distancia, peito.y + lado.y * distancia
     local achou, chao = GetGroundZFor_3dCoord(x, y, peito.z + 1.0, false)
-    local z = achou and chao or (GetEntityCoords(cache.ped).z - 1.0)
+    local z = achou and chao or (GetEntityCoords(paciente).z - 1.0)
 
     SetEntityCoordsNoOffset(ped, x, y, z, false, false, false)
     SetEntityHeading(ped, GetHeadingFromVector_2d(peito.x - x, peito.y - y))

@@ -5,7 +5,7 @@ lua54 'yes'
 name 'pa_medico'
 author 'Pista & Asfalto RP'
 description 'Desmaio e resgate: tempo de desmaio, chamado ao SAMU (tecla G ou 192 no celular) com localização aproximada, ambulância NPC quando não tem médico e acordar no hospital perdendo tudo.'
-version '1.0.0'
+version '1.1.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
@@ -17,10 +17,12 @@ client_scripts {
     'client/main.lua',
     'client/npc.lua',
     'client/medico.lua',
+    'client/atendimento.lua',
 }
 
 server_scripts {
     'server/main.lua',
+    'server/atendimento.lua',
 }
 
 ui_page 'html/index.html'
@@ -35,4 +37,5 @@ dependencies {
     'ox_lib',
     'qbx_core',
     'qbx_medical',
+    'ox_inventory',
 }

@@ -54,7 +54,7 @@ return {
     },
 
     ['bandage'] = {
-        label = 'Bandage',
+        label = 'Bandagem',
         weight = 115,
     },
 
@@ -681,9 +681,19 @@ return {
         label = 'Jogo de pistões', weight = 4000, stack = true, close = true,
         description = 'Pistões originais novos. Para reconstruir um motor quebrado, na bancada, depois da retífica.',
     },
+    ['cabecote_original'] = {
+        label = 'Cabeçote original', weight = 9000, stack = true, close = true,
+        description = 'Cabeçote de fábrica. Sai do motor quebrado ao abrir; recoloque na bancada depois da retífica.',
+        client = { image = 'cabecote_retrabalhado.png' },
+    },
+    ['junta_original'] = {
+        label = 'Junta do cabeçote original', weight = 300, stack = true, close = true,
+        description = 'Junta de fábrica. Queima quando o motor quebra; troque na bancada depois da retífica.',
+        client = { image = 'junta_reforcada.png' },
+    },
     ['jogo_bielas'] = {
         label = 'Jogo de bielas', weight = 3000, stack = true, close = true,
-        description = 'Bielas originais novas. Para reconstruir um motor quebrado, na bancada, depois da retífica.',
+        description = 'Bielas originais novas. Na bancada, troca as bielas que estiverem no motor.',
     },
     ['licenca_funcionamento'] = {
         label = 'Licença de funcionamento', weight = 50, stack = false, close = true,
@@ -706,6 +716,11 @@ return {
         description = 'Dá XP de mecânica uma única vez por personagem.',
         consume = 0,
         client = { export = 'pista_skills.usarManual' },
+    },
+    ['laudo_dinamometro'] = {
+        label = 'Laudo de dinamômetro', weight = 20, stack = false, close = true,
+        description = 'Potência, torque e o ajuste recomendado de marchas e mapa do carro.',
+        client = { export = 'pa_dinamometro.usarLaudo' },
     },
     ['notebook_remap'] = {
         label = 'Notebook de remap', weight = 2500, stack = false, close = true,
@@ -751,6 +766,11 @@ return {
         label = 'Kit de freio de competição', weight = 8000, stack = true, close = true,
         description = 'Freio de pista. Instale nas 4 rodas no elevador.',
         client = { export = 'pista_tuning.usarFreio' },
+    },
+    ['painel_digital'] = {
+        label = 'Painel digital PA Dash', weight = 1500, stack = true, close = true,
+        description = 'Painel com shift light, marcha e rpm na tela. Com chip Stage 2 ou mais mostra também turbo, lambda e temperatura. Instale com o jogo de soquetes (capô aberto).',
+        client = { export = 'pista_tuning.usarPeca' },
     },
     ['cambio_automatico'] = {
         label = 'Câmbio automático', weight = 15000, stack = true, close = true,
@@ -832,11 +852,88 @@ return {
     ['regador'] = { label = 'Regador', weight = 1500, stack = false, description = 'Enche em qualquer rio, lago ou mar.', client = { export = 'pa_plantacao.useCan' } },
 
     -- pa_casas
-    ['caixa_movel'] = { label = 'Caixa de móvel', weight = 5000, stack = false, close = true, description = 'Móvel embalado. Monte pelo modo decorar (F7) dentro da sua casa.' },
+    ['caixa_movel'] = { label = 'Caixa de móvel', weight = 5000, stack = false, close = true, description = 'Móvel embalado. Use dentro da sua casa para montar.', client = { export = 'pa_casas.usarCaixa' } },
     ['mandado_busca'] = { label = 'Mandado de busca', weight = 10, stack = false, close = true },
     ['pe_de_cabra'] = { label = 'Pé de cabra', weight = 1500, stack = true },
     ['joia_roubada'] = { label = 'Joia', weight = 100, stack = true },
     ['relogio_roubado'] = { label = 'Relógio de ouro', weight = 150, stack = true },
     ['celular_roubado'] = { label = 'Celular roubado', weight = 200, stack = true },
     ['notebook_roubado'] = { label = 'Notebook roubado', weight = 2000, stack = true },
+
+    -- pa_caca
+    ['licenca_caca'] = { label = 'Licença de Caça', weight = 0, stack = false, close = true, description = 'Emitida pela polícia. Válida por 30 dias.' },
+
+    ['kit_fogueira'] = { label = 'Kit de Fogueira', weight = 1500, stack = true, close = true,
+        client = { export = 'pa_caca.usarFogueira' } },
+
+    -- Carnes cruas
+    ['carne_porco']  = { label = 'Carne de Porco',  weight = 500, stack = true, close = true },
+    ['carne_veado']  = { label = 'Carne de Veado',  weight = 500, stack = true, close = true },
+    ['carne_cervo']  = { label = 'Carne de Cervo',  weight = 500, stack = true, close = true },
+    ['carne_javali'] = { label = 'Carne de Javali', weight = 500, stack = true, close = true },
+    ['carne_lobo']   = { label = 'Carne de Lobo',   weight = 500, stack = true, close = true },
+    ['carne_onca']   = { label = 'Carne de Onça',   weight = 500, stack = true, close = true },
+
+    -- Carne assada (mata a fome)
+    ['carne_assada'] = { label = 'Carne Assada', weight = 400, stack = true, close = true,
+        client = { status = { hunger = 400000 }, anim = 'eating', prop = 'burger', usetime = 3000, notification = 'Você comeu carne assada.' } },
+
+    -- Peles (qualidade vai no metadata)
+    ['pele_porco']  = { label = 'Pele de Porco',  weight = 1000, stack = true, close = true },
+    ['pele_veado']  = { label = 'Pele de Veado',  weight = 1000, stack = true, close = true },
+    ['pele_cervo']  = { label = 'Pele de Cervo',  weight = 1000, stack = true, close = true },
+    ['pele_javali'] = { label = 'Pele de Javali', weight = 1000, stack = true, close = true },
+    ['pele_lobo']   = { label = 'Pele de Lobo',   weight = 1000, stack = true, close = true },
+    ['pele_onca']   = { label = 'Pele de Onça',   weight = 1000, stack = true, close = true },
+
+    -- Itens específicos / troféus
+    ['banha_porco']     = { label = 'Banha de Porco',     weight = 300, stack = true, close = true },
+    ['pata_veado']      = { label = 'Pata de Veado',      weight = 300, stack = true, close = true },
+    ['chifre_cervo']    = { label = 'Chifre de Cervo',    weight = 800, stack = true, close = true },
+    ['dente_javali']    = { label = 'Dente de Javali',    weight = 100, stack = true, close = true },
+    ['presa_lobo']      = { label = 'Presa de Lobo',      weight = 100, stack = true, close = true },
+    ['garra_onca']      = { label = 'Unha de Onça',       weight = 100, stack = true, close = true },
+    ['trofeu_lendario'] = { label = 'Troféu Lendário',    weight = 2000, stack = false, close = true },
+
+    -- pa_coca
+    ['folha_coca']     = { label = 'Folha de coca', weight = 20, stack = true, description = 'Colhida na estufa de Grapeseed.' },
+    ['galao_solvente'] = { label = 'Galão de solvente', weight = 2000, stack = true },
+    ['po_catalisador'] = { label = 'Pó catalisador', weight = 500, stack = true },
+    ['agente_refino']  = { label = 'Agente de refino', weight = 500, stack = true },
+    ['saquinho_coca']  = { label = 'Saquinho de pó', weight = 10, stack = true },
+
+    -- pa_celeiro (carne_porco já existe, vem do pa_caca)
+    ['leite']        = { label = 'Leite',           weight = 1000, stack = true, close = true },
+    ['ovo']          = { label = 'Ovo',             weight = 60,   stack = true, close = true },
+    ['carne_vaca']   = { label = 'Carne Bovina',    weight = 500,  stack = true, close = true },
+    ['carne_frango'] = { label = 'Carne de Frango', weight = 300,  stack = true, close = true },
+
+    -- pa_celeiro: caixas de produção (pesadas; carregadas nos braços, vão no porta-malas)
+    ['caixa_ovos']         = { label = 'Caixa de ovos',            weight = 8000,  stack = true, close = true, description = 'Caixa com 12 ovos. Venda na Cooperativa.' },
+    ['caixa_leite']        = { label = 'Caixa de leite',           weight = 12000, stack = true, close = true, description = 'Caixa com 6 litros de leite. Venda na Cooperativa.' },
+    ['caixa_carne_bovina'] = { label = 'Caixa de carne bovina',    weight = 15000, stack = true, close = true, description = 'Venda na Cooperativa.' },
+    ['caixa_carne_suina']  = { label = 'Caixa de carne suína',     weight = 12000, stack = true, close = true, description = 'Venda na Cooperativa.' },
+    ['caixa_carne_frango'] = { label = 'Caixa de carne de frango', weight = 9000,  stack = true, close = true, description = 'Venda na Cooperativa.' },
+
+    -- pa_bitcoin
+    ['placa_video']          = { label = 'Placa de vídeo',          weight = 1500,  stack = false, close = true, description = 'Instale num gaveteiro de mineração pelo PC.', client = { export = 'pa_bitcoin.usarEquipamento' } },
+    ['gaveteiro_mineracao']  = { label = 'Gaveteiro de mineração',  weight = 15000, stack = true,  close = true, description = 'Estrutura para placas de vídeo.', client = { export = 'pa_bitcoin.usarEquipamento' } },
+    ['pasta_termica']        = { label = 'Pasta térmica',           weight = 50,    stack = true,  close = true, client = { export = 'pa_bitcoin.usarEquipamento' } },
+    ['kit_limpeza_pc']       = { label = 'Kit de limpeza de PC',    weight = 500,   stack = true,  close = true, client = { export = 'pa_bitcoin.usarEquipamento' } },
+    ['pendrive_btc']         = { label = 'Carteira física (BTC)',   weight = 50,    stack = false, close = true, description = 'Carteira física: vazia', client = { export = 'pa_bitcoin.usarPendrive' } },
+    ['blueprint_lockpick']        = { label = 'Blueprint: lockpick',         weight = 50, stack = false, close = true, client = { export = 'pa_bitcoin.usarBlueprint' } },
+    ['blueprint_arma_artesanal']  = { label = 'Blueprint: arma artesanal',   weight = 50, stack = false, close = true, client = { export = 'pa_bitcoin.usarBlueprint' } },
+    ['blueprint_municao']         = { label = 'Blueprint: munição',          weight = 50, stack = false, close = true, client = { export = 'pa_bitcoin.usarBlueprint' } },
+    ['tablet_corrida_ilegal'] = { label = 'Tablet de corrida ilegal', weight = 800, stack = false, close = true, client = { export = 'pa_bitcoin.usarTablet' } },
+    ['tablet_desmanche']      = { label = 'Tablet do desmanche',      weight = 800, stack = false, close = true, client = { export = 'pa_bitcoin.usarTablet' } },
+    ['tablet_corrida_legal']  = { label = 'Tablet de corrida legal',  weight = 800, stack = false, close = true, client = { export = 'pa_bitcoin.usarTablet' } },
+    ['voucher_pintura']       = { label = 'Voucher de pintura exclusiva', weight = 0, stack = true, close = true, client = { export = 'pa_bitcoin.usarVoucher' } },
+    ['voucher_skin']          = { label = 'Voucher de skin exclusiva',    weight = 0, stack = true, close = true, client = { export = 'pa_bitcoin.usarVoucher' } },
+    ['cupom_performance']     = { label = 'Cupom de peças (10%)',         weight = 0, stack = false, close = true, client = { export = 'pa_bitcoin.usarVoucher' } },
+    ['bancada_ilegal']        = { label = 'Bancada clandestina',          weight = 20000, stack = false, close = true, description = 'Use para montar. Fabrique com as blueprints.', client = { export = 'pa_bitcoin.usarBancada' } },
+
+    -- ===== Pista & Asfalto: SAMU (pa_medico) =====
+    ['desfibrilador'] = { label = 'Desfibrilador', weight = 3000, stack = false, close = true, description = 'Reanima na rua (não gasta). Precisa de adrenalina.' },
+    ['adrenalina']    = { label = 'Adrenalina',    weight = 100,  stack = true,  close = true, description = 'Gasta 1 por reanimação na rua.' },
+    ['kit_trauma']    = { label = 'Kit de trauma', weight = 1500, stack = true,  close = true, description = 'Tratamento na rua: vida até 100% e ferimentos leves e moderados.' },
 }

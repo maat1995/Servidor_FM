@@ -166,42 +166,7 @@ RegisterNetEvent('QBCore:Client:OnJobUpdate', function()
     SetTimeout(500, function() if not emServico() then limparTodos() end end)
 end)
 
----------------------------------------------------------------------
--- OLHO (ox_target) EM QUEM ESTÁ DESMAIADO
----------------------------------------------------------------------
-CreateThread(function()
-    if GetResourceState('ox_target') ~= 'started' then return end
-    local function alvoDesmaiado(entidade)
-        local id = GetPlayerServerId(NetworkGetPlayerIndexFromPed(entidade))
-        return id and id > 0 and Player(id).state.isDead
-    end
-    exports.ox_target:addGlobalPlayer({
-        {
-            name = 'pa_medico_reanimar',
-            icon = 'fas fa-heart-pulse',
-            label = 'Reanimar (kit de primeiros socorros)',
-            distance = 2.0,
-            canInteract = function(entidade)
-                return emServico() and alvoDesmaiado(entidade)
-            end,
-            onSelect = function()
-                TriggerEvent('hospital:client:RevivePlayer')
-            end,
-        },
-        {
-            name = 'pa_medico_tratar',
-            icon = 'fas fa-bandage',
-            label = 'Tratar ferimentos (bandagem)',
-            distance = 2.0,
-            canInteract = function(entidade)
-                return emServico() and not alvoDesmaiado(entidade)
-            end,
-            onSelect = function()
-                TriggerEvent('hospital:client:TreatWounds')
-            end,
-        },
-    })
-end)
+-- O atendimento (olho > "Atender paciente") fica em client/atendimento.lua
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end

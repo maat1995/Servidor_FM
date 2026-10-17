@@ -39,7 +39,11 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - **G** chama o SAMU: os médicos em serviço recebem um alerta com a **área aproximada** do corpo (círculo no mapa, não o ponto exato)
   - Celular: ligar para **192** no NPWD faz o mesmo; quem liga bem chama para a própria posição (amigo caído do lado)
   - Médico assume com **Y** no aviso ou pelo `/chamados` (GPS na área); o paciente vê quem está a caminho
-  - Médico reanima/trata pelo olho (ox_target) usando o kit e a bandagem do qbx_ambulancejob
+  - Atendimento: olho no paciente > **Atender paciente** abre a ficha (vida, sangramento e ferimentos por parte do corpo)
+    - **Na rua** (com itens): reanimar (`desfibrilador` + 1 `adrenalina`, acorda com 25%), estancar sangramento (`bandage`)
+      e tratamento (`kit_trauma`: vida até 100%, ferimentos leves e moderados). Reanimar na rua mantém os ferimentos graves
+    - **No hospital** (Pillbox e Paleto, sem itens): reanimar (acorda com 50%) e tratamento completo (cura tudo, vida 100%)
+    - Itens no armário do SAMU (qbx_ambulancejob); tudo conferido no servidor (emprego, distância, itens e tempo)
   - Sem médico em serviço: vem uma **ambulância NPC** de sirene, o socorrista faz massagem cardíaca e reanima (cobra `Config.npc.preco`)
   - Tempo acabou: **segurar E** acorda no hospital **perdendo tudo** (inventário limpo + internação do qbx_ambulancejob); antes disso o servidor bloqueia
   - Ninguém é mandado para o hospital sozinho: enquanto não segurar E, um médico ainda pode chegar
