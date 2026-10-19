@@ -27,6 +27,11 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - `/hud`: km/h ou mph, tamanho, bússola, esconder status cheio e modo cinema (salvo no PC do jogador)
   - Outros scripts podem esconder a HUD: `exports.pa_hud:ocultar(true)`
   - Substitui o qbx_hud (`stop qbx_hud` no server.cfg): estresse (tiro, tela embaçada), indicador de cinto, `/banco` e `/dinheiro`
+- `resources/[pista]/pa_handling` — handling realista
+  - Cada carro com a ficha do carro real de inspiração (cv, peso, tração, marchas, 0-100, velocidade final)
+  - ~200 nativos com ficha real; o resto com ficha automática na faixa realista da classe
+  - `/calibrar` (admin): o script dirige sozinho, mede 0-100 e velocidade final e corrige até bater com a ficha
+  - Addons (carros brasileiros) entram pela `Config.fichas`; `/ficha` mostra a ficha do carro
 - `resources/[pista]/pa_cambio` — câmbio manual
   - Todo carro sai **manual**: liga em neutro (N), **Shift** sobe e **Ctrl** desce (N → Shift = 1ª, N → Ctrl = ré)
   - Em N o motor acelera mas o carro não anda; desligou ou saiu do carro, volta para N

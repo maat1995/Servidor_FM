@@ -85,6 +85,8 @@ ensure [assets]
 
 # Pista & Asfalto
 ensure [pista]
+# Handling realista: /calibrar só para admin
+add_ace group.admin pa_handling.admin allow
 
 ensure [npwd-apps]
 ensure qbx_npwd

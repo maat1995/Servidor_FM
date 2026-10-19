@@ -176,6 +176,13 @@ local function medir(veh)
     local vmax = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fInitialDriveMaxFlatVel')
     local mult = 1.0 + (GetVehicleMod(veh, 11) + 1) * 0.05 + (IsToggleModOn(veh, 18) and 0.1 or 0.0)
     local cv = math.floor(forca * massa * vmax / 140.0 * mult)
+    -- Com a ficha real (pa_handling): cv de fábrica x o quanto a preparação somou na força
+    if GetResourceState('pa_handling') == 'started' then
+        local ok, ficha = pcall(function() return exports.pa_handling:ficha(veh) end)
+        if ok and ficha and ficha.cv and ficha.forcaBase and ficha.forcaBase > 0 then
+            cv = math.floor(ficha.cv * (forca / ficha.forcaBase) * mult)
+        end
+    end
     local torque = math.floor(cv * 716.2 / 6500 * 10) / 10 -- kgfm no pico (aprox.)
     return cv, torque
 end
