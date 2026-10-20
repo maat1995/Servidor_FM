@@ -933,6 +933,7 @@ return {
     ['tablet_corrida_ilegal'] = { label = 'Tablet de corrida ilegal', weight = 800, stack = false, close = true, client = { export = 'pa_bitcoin.usarTablet' } },
     ['tablet_desmanche']      = { label = 'Tablet do desmanche',      weight = 800, stack = false, close = true, client = { export = 'pa_bitcoin.usarTablet' } },
     ['tablet_corrida_legal']  = { label = 'Tablet de corrida legal',  weight = 800, stack = false, close = true, client = { export = 'pa_bitcoin.usarTablet' } },
+    ['tablet_roubo']          = { label = 'Tablet de roubo',          weight = 800, stack = false, close = true, description = 'Encomendas de carros. Comprado com BTC.', client = { export = 'pa_roubocarro.usarTablet' } },
     ['voucher_pintura']       = { label = 'Voucher de pintura exclusiva', weight = 0, stack = true, close = true, client = { export = 'pa_bitcoin.usarVoucher' } },
     ['voucher_skin']          = { label = 'Voucher de skin exclusiva',    weight = 0, stack = true, close = true, client = { export = 'pa_bitcoin.usarVoucher' } },
     ['cupom_performance']     = { label = 'Cupom de peças (10%)',         weight = 0, stack = false, close = true, client = { export = 'pa_bitcoin.usarVoucher' } },

@@ -131,6 +131,9 @@ lib.callback.register('pa_policia:server:vistoria', function(src, net)
     if GetResourceState('pista_tuning') == 'started' then
         dados = exports.pista_tuning:dadosDaPlaca(plate) or {}
     end
+    if GetResourceState('pa_roubocarro') == 'started' and exports.pa_roubocarro:chassiRiscado(plate) then
+        dados.chassi_riscado = true
+    end
     local temLaudo, quando = laudoRecente(plate)
     local itens, multa, apreender = avaliar(dados, temLaudo)
     local dono = donoDaPlaca(plate)

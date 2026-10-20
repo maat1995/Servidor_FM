@@ -79,3 +79,15 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
 - `/setskill [id] [nivel]` · `/darxp [id] [xp]` · `/resetskill [id]` (devolve os pontos) · `/minhaskill`
 - `/pegarcoords` — mostra e copia a posição
 - `/ajustegancho x y z` · `/ajusteempurrar x y z rz`
+- `resources/[pista]/pa_roubocarro` — roubo de carros sob encomenda
+  - Tablet de roubo (`tablet_roubo`), comprado com BTC no PC (pa_bitcoin); abre pelo inventário
+  - Níveis 1 a 10 que sobem a cada carro entregue: 1–3 classe D (compactos e velhos, qualquer um da lista na rua),
+    4–5 C, 6–7 B, 8–9 A e 10 S (carro estacionado num ponto, área aproximada no GPS que encolhe quando chega perto)
+  - Solo ou em dupla (convite pelo ID): quem entrega leva 70% do XP e das moedas, o parceiro 30%
+  - Arrombar com lockpick no olho (minigame por classe), alarme e polícia mínima por classe; classes A e S têm rastreador
+    que manda a posição para a polícia até ser desligado pelo tablet
+  - Alerta próprio na pa_policia (`10-16E` · roubo de veículo sob encomenda), diferente de um roubo comum
+  - Moedas compram o carro entregue com **chassi riscado** (24h no tablet, retirada no hangar de Sandy Shores),
+    e as melhorias do tablet (localizador, bloqueador de rastreador, gazua reforçada, mais tempo)
+  - Venda no RP: o tablet passa o carro riscado para outro jogador ao lado; a vistoria da pa_policia identifica o chassi raspado (multa e apreensão)
+  - Admin: `/rc_ponto` copia a posição para o config, `/rc_xp [id] [xp] [moedas]`

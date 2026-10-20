@@ -286,6 +286,8 @@ Config.vistoria = {
         { slot = 'remap',    exigeLaudo = true, label = 'Remap sem laudo do dinamômetro', multa = 1500 },
         { slot = 'cabecote', acima = 1, exigeLaudo = true, label = 'Cabeçote de corrida sem laudo', multa = 2000 },
         { slot = 'pistao',   igual = 'forjado', exigeLaudo = true, label = 'Motor forjado sem laudo', multa = 2000 },
+        -- pa_roubocarro: carro comprado com chassi riscado
+        { slot = 'chassi_riscado', label = 'Chassi raspado (veículo de roubo)', multa = 8000, apreender = true },
     },
 }
 

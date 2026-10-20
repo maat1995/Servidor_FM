@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Tablet de roubo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="tablet" class="oculto">
+        <div class="moldura">
+            <header>
+                <div class="marca">
+                    <span class="logo">◆</span>
+                    <div>
+                        <div class="titulo">ENCOMENDAS</div>
+                        <div class="sub" id="nome">—</div>
+                    </div>
+                </div>
+                <div class="perfil">
+                    <div class="nivel">
+                        <span>NÍVEL</span>
+                        <strong id="nivel">1</strong>
+                    </div>
+                    <div class="xp">
+                        <div class="xp-texto"><span id="classeAtual">Classe D</span><span id="xpTexto">0 / 100 XP</span></div>
+                        <div class="barra"><div id="xpBarra"></div></div>
+                    </div>
+                    <div class="moedas">
+                        <span id="moedaNome">MOEDAS</span>
+                        <strong id="moedas">0</strong>
+                    </div>
+                    <button class="fechar" id="fechar" title="Fechar">✕</button>
+                </div>
+            </header>
+
+            <nav>
+                <button data-aba="contrato" class="ativa">Contrato</button>
+                <button data-aba="dupla">Dupla</button>
+                <button data-aba="ofertas">Carros entregues</button>
+                <button data-aba="melhorias">Melhorias</button>
+                <button data-aba="garagem">Chassi riscado</button>
+            </nav>
+
+            <main>
+                <section id="aba-contrato" class="aba ativa"></section>
+                <section id="aba-dupla" class="aba"></section>
+                <section id="aba-ofertas" class="aba"></section>
+                <section id="aba-melhorias" class="aba"></section>
+                <section id="aba-garagem" class="aba"></section>
+            </main>
+
+            <footer>
+                <span id="roubos">0 entregas</span>
+                <span>Conexão criptografada · pagamento em <b id="moedaRodape">moedas</b></span>
+            </footer>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
