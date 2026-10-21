@@ -75,6 +75,7 @@ function irPara(aba, arg) {
 $$('#abas button').forEach((b) => (b.onclick = () => irPara(b.dataset.aba)));
 $('#fechar').onclick = () => post('fechar');
 document.addEventListener('keydown', (e) => {
+    if (!$('#painel').classList.contains('oculto') && (e.key === 'Escape' || e.key === 'F6')) { painelAcao('fechar'); return; }
     if (e.key !== 'Escape') return;
     if (!$('#modal').classList.contains('oculto')) return fecharModal();
     if (!$('#mdt').classList.contains('oculto')) post('fechar');
@@ -541,3 +542,199 @@ window.addEventListener('message', ({ data }) => {
     }
 });
 
+
+// ================================================================== SONS (rádio da central)
+let audio;
+function bip(freq, ini, dur, vol = 0.12, tipo = 'square') {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = tipo; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, audio.currentTime + ini);
+    g.gain.linearRampToValueAtTime(vol, audio.currentTime + ini + 0.01);
+    g.gain.setValueAtTime(vol, audio.currentTime + ini + dur - 0.02);
+    g.gain.linearRampToValueAtTime(0, audio.currentTime + ini + dur);
+    o.connect(g).connect(audio.destination);
+    o.start(audio.currentTime + ini); o.stop(audio.currentTime + ini + dur + 0.02);
+}
+function chiado(ini, dur, vol = 0.05) {
+    const n = Math.floor(audio.sampleRate * dur), buf = audio.createBuffer(1, n, audio.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = audio.createBufferSource(), g = audio.createGain(), f = audio.createBiquadFilter();
+    f.type = 'bandpass'; f.frequency.value = 1800; g.gain.value = vol;
+    src.buffer = buf; src.connect(f).connect(g).connect(audio.destination);
+    src.start(audio.currentTime + ini);
+}
+function somAlerta(prioridade) {
+    try {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        chiado(0, 0.12);
+        if (prioridade === 'baixa') { bip(880, 0.12, 0.12, 0.08, 'sine'); }
+        else if (prioridade === 'media') { bip(1000, 0.12, 0.09); bip(1350, 0.24, 0.12); }
+        else if (prioridade === 'alta') { [0, 0.15, 0.3].forEach((t) => bip(1450, 0.12 + t, 0.1)); }
+        else { for (let i = 0; i < 6; i++) bip(i % 2 ? 1300 : 850, 0.12 + i * 0.22, 0.2, 0.13, 'sawtooth'); }
+        chiado(prioridade === 'maxima' ? 1.5 : 0.55, 0.1, 0.04);
+    } catch (e) { /* sem áudio */ }
+}
+
+// ================================================================== AVISOS (cards)
+const cards = new Map(); // id -> { el, criado, timer }
+const metros = (m) => (m >= 1000 ? (m / 1000).toFixed(1).replace('.', ',') + ' km' : m + ' m');
+const ha = (seg) => (seg < 60 ? 'agora' : `há ${Math.floor(seg / 60)} min`);
+
+function removerCard(id) {
+    const c = cards.get(id);
+    if (!c) return;
+    cards.delete(id);
+    clearTimeout(c.timer);
+    c.el.classList.add('saindo');
+    setTimeout(() => c.el.remove(), 380);
+}
+
+function novoCard(d) {
+    removerCard(d.id);
+    const el = document.createElement('div');
+    el.className = `card-alerta pri-${d.prioridade}`;
+    const local = [d.rua, d.zona].filter(Boolean).join(', ');
+    const com = arr(d.policiais);
+    el.innerHTML = `
+        <div class="ca-topo"><span class="ca-cod">${esc(d.codigo)}</span><span class="ca-id">#${d.id}</span><span class="ca-tempo">agora</span></div>
+        <div class="ca-titulo">${esc(d.titulo)}</div>
+        ${d.descricao ? `<div class="ca-desc">${esc(d.descricao)}</div>` : ''}
+        <div class="ca-local"><span class="rua">📍 ${esc(local)}${d.exato ? '' : ' <span class="aprox">(área aproximada)</span>'}</span><span class="dist">${metros(d.distancia)}</span></div>
+        <div class="ca-rodape">${com.length ? `<span class="ca-com">Com ${esc(com.join(', '))}</span>` : `<span class="ca-tecla">${esc(d.tecla)}</span> assumir e traçar rota`}</div>
+        <div class="ca-barra"></div>`;
+    const caixa = $('#cards');
+    caixa.prepend(el);
+    const barra = $('.ca-barra', el);
+    barra.style.width = '100%';
+    barra.style.transition = `width ${d.duracao}s linear`;
+    requestAnimationFrame(() => requestAnimationFrame(() => (barra.style.width = '0%')));
+    const c = { el, criado: Date.now(), timer: setTimeout(() => removerCard(d.id), d.duracao * 1000) };
+    cards.set(d.id, c);
+    // limite de cards na tela
+    const max = d.max || 4;
+    [...cards.keys()].slice(0, Math.max(0, cards.size - max)).forEach(removerCard);
+    if (d.som) somAlerta(d.prioridade);
+}
+
+setInterval(() => {
+    for (const c of cards.values()) $('.ca-tempo', c.el).textContent = ha((Date.now() - c.criado) / 1000);
+}, 5000);
+
+// ================================================================== PAINEL F6
+let P_ = null, vista = 'inicio';
+const ICONES = {
+    tablet: '<svg viewBox="0 0 24 24"><rect x="4" y="2.5" width="16" height="19" rx="2.5"/><path d="M10 18.5h4"/></svg>',
+    ocorr: '<svg viewBox="0 0 24 24"><path d="M12 13v8"/><circle cx="12" cy="10" r="2.5"/><path d="M7.5 5.5a6.5 6.5 0 0 0 0 9M16.5 5.5a6.5 6.5 0 0 1 0 9M4.5 2.5a11 11 0 0 0 0 15M19.5 2.5a11 11 0 0 1 0 15"/></svg>',
+    blitz: '<svg viewBox="0 0 24 24"><path d="M12 3l5 16H7z"/><path d="M8.5 14h7M10 9.5h4M4 21h16"/></svg>',
+    radar: '<svg viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0"/><path d="M12 16l4.5-5"/><circle cx="12" cy="16" r="1.4"/><path d="M3 20h18"/></svg>',
+    pin: '<svg viewBox="0 0 24 24"><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>',
+    pericia: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/><path d="M8 10.5h5M10.5 8v5"/></svg>',
+    limpar: '<svg viewBox="0 0 24 24"><path d="M14 4l6 6M4 20l7.5-7.5M11.5 12.5l2-2 4 4-2 2a3 3 0 0 1-4 0l-.5-.5a3 3 0 0 1 0-4z"/></svg>',
+    panico: '<svg viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5v.5"/></svg>',
+    cone: '<svg viewBox="0 0 24 24"><path d="M12 3l5 16H7z"/><path d="M4 21h16"/></svg>',
+    tapete: '<svg viewBox="0 0 24 24"><rect x="2.5" y="10" width="19" height="4" rx="1"/><path d="M5 10l1-3M9 10l1-3M13 10l1-3M17 10l1-3"/></svg>',
+};
+
+function painelAcao(acao, dados) { post('painel', { acao, ...(dados || {}) }); }
+
+function botaoPainel({ id, icone, titulo, sub, desabilitado, classe, badge }) {
+    return `<button class="p-btn ${classe || ''}" data-p="${id}" ${desabilitado ? 'disabled' : ''}>
+        ${ICONES[icone] || ''}<b>${esc(titulo)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}
+        ${badge ? `<span class="badge">${badge}</span>` : ''}</button>`;
+}
+
+function desenharPainel() {
+    const d = P_;
+    if (!d) return;
+    $('#p-patente').textContent = `LSPD · ${d.patente}`;
+    $('#p-nome').textContent = d.nome;
+    $('#p-ponto').classList.toggle('on', !!d.servico);
+    $('#p-servico').textContent = d.servico ? 'Em serviço' : 'Fora de serviço';
+    $('#p-distintivo').textContent = d.distintivo || '';
+    const pd = d.perms || {};
+    const ocorr = arr(d.ocorrencias);
+    const corpo = $('#p-corpo');
+
+    if (vista === 'ocorrencias') {
+        corpo.innerHTML = `<div class="p-voltar"><button data-v="inicio">←</button><h4>Ocorrências abertas</h4></div>
+            ${ocorr.length ? ocorr.map((o) => {
+                const com = arr(o.policiais);
+                return `<div class="p-oc pri-${o.prioridade}">
+                    <div class="p-oc-topo"><span class="cod">${esc(o.codigo)}</span><span>#${o.id} · ${o.minutos ? 'há ' + o.minutos + ' min' : 'agora'}</span><span class="dist">${metros(o.distancia)}</span></div>
+                    <b>${esc(o.titulo)}</b>
+                    <div class="sub">${esc(o.local_ || '')}${o.descricao ? ' · ' + esc(o.descricao) : ''}</div>
+                    <div class="sub">${com.length ? 'Com ' + esc(com.join(', ')) : 'Ninguém assumiu'}</div>
+                    <div class="acoes"><button class="pri" data-oc="assumir" data-id="${o.id}">Assumir</button>
+                    <button data-oc="gps" data-id="${o.id}" data-x="${o.centro.x}" data-y="${o.centro.y}">GPS</button>
+                    <button data-oc="encerrar" data-id="${o.id}">Encerrar</button></div></div>`;
+            }).join('') : '<div class="p-vazio">Nenhuma ocorrência aberta.</div>'}`;
+    } else if (vista === 'blitz') {
+        corpo.innerHTML = `<div class="p-voltar"><button data-v="inicio">←</button><h4>Blitz</h4></div>
+            <div class="p-grade">${arr(d.objetos).map((o) => botaoPainel({ id: 'obj:' + o.id, icone: o.tapete ? 'tapete' : 'cone', titulo: o.label, sub: 'colocar' })).join('')}</div>`;
+    } else {
+        corpo.innerHTML = `
+            ${d.servico ? '' : '<div class="p-aviso">Você está fora de serviço. Bata o ponto na recepção da DP de Mission Row.</div>'}
+            <div class="p-numeros">
+                <div class="p-num"><b>${d.colegas}</b><span>policiais em serviço</span></div>
+                <div class="p-num ${ocorr.length ? 'alerta' : ''}"><b>${ocorr.length}</b><span>ocorrências abertas</span></div>
+            </div>
+            <div class="p-grade">
+                ${botaoPainel({ id: 'tablet', icone: 'tablet', titulo: 'Tablet', sub: 'fichas, BO, mandados', desabilitado: !d.servico })}
+                ${botaoPainel({ id: 'v:ocorrencias', icone: 'ocorr', titulo: 'Ocorrências', sub: 'assumir e GPS', desabilitado: !d.servico, badge: ocorr.length || '' })}
+                ${botaoPainel({ id: 'v:blitz', icone: 'blitz', titulo: 'Blitz', sub: 'cones, barreira, tapete', desabilitado: !d.servico || !pd.objetos })}
+                ${botaoPainel({ id: 'radar', icone: 'radar', titulo: 'Radar', sub: d.radar ? 'ligado' : 'na viatura', desabilitado: !d.servico || !pd.radarMovel, classe: d.radar ? 'ligado' : '' })}
+                ${botaoPainel({ id: 'limpar', icone: 'limpar', titulo: 'Limpar cena', sub: 'perícia', desabilitado: !d.servico || !pd.pericia })}
+                ${botaoPainel({ id: 'dp', icone: 'pin', titulo: 'Voltar à DP', sub: 'GPS para Mission Row' })}
+                ${botaoPainel({ id: 'panico', icone: 'panico', titulo: 'PÂNICO', classe: 'panico', desabilitado: !d.servico })}
+            </div>`;
+    }
+
+    $$('[data-v]', corpo).forEach((b) => (b.onclick = () => { vista = b.dataset.v; desenharPainel(); }));
+    $$('[data-p]', corpo).forEach((b) => (b.onclick = () => {
+        const id = b.dataset.p;
+        if (id.startsWith('v:')) { vista = id.slice(2); desenharPainel(); return; }
+        if (id.startsWith('obj:')) return painelAcao('objeto', { id: id.slice(4) });
+        painelAcao(id);
+    }));
+    $$('[data-oc]', corpo).forEach((b) => (b.onclick = () => painelAcao(b.dataset.oc, {
+        id: Number(b.dataset.id), x: Number(b.dataset.x), y: Number(b.dataset.y),
+    })));
+}
+$('#p-fechar').onclick = () => painelAcao('fechar');
+
+// ================================================================== mensagens novas
+window.addEventListener('message', ({ data }) => {
+    if (!data || !data.acao) return;
+    switch (data.acao) {
+        case 'cardNovo': novoCard(data.card); break;
+        case 'cardRemover': removerCard(data.id); break;
+        case 'cardAssumido': {
+            const c = cards.get(data.id);
+            if (!c) break;
+            const rod = $('.ca-rodape', c.el);
+            rod.innerHTML = data.eu ? '<span class="ca-meu">✓ Você assumiu · rota marcada no GPS</span>' : `<span class="ca-com">Assumida por ${esc(data.nome)}</span>`;
+            clearTimeout(c.timer);
+            c.timer = setTimeout(() => removerCard(data.id), data.eu ? 4000 : 6000);
+            break;
+        }
+        case 'cardDistancias':
+            for (const x of arr(data.lista)) {
+                const c = cards.get(x.id);
+                if (c) $('.dist', c.el).textContent = metros(x.d);
+            }
+            break;
+        case 'painelAbrir':
+            P_ = data.dados; vista = data.vista || 'inicio';
+            $('#painel').classList.remove('oculto');
+            document.body.classList.add('painel-aberto');
+            desenharPainel();
+            break;
+        case 'painelDados':
+            P_ = data.dados; desenharPainel();
+            break;
+        case 'painelFechar':
+            $('#painel').classList.add('oculto');
+            document.body.classList.remove('painel-aberto');
+            break;
+    }
+});

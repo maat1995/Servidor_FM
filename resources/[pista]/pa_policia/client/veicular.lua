@@ -87,10 +87,18 @@ AddEventHandler('pa_policia:client:menuBlitz', function()
     for _, o in ipairs(Config.objetos.lista) do
         opcoes[#opcoes + 1] = { title = o.label, icon = o.tapete and 'road-spikes' or 'road-barrier', onSelect = function() colocar(o) end }
     end
-    lib.registerContext({ id = 'pa_policia_blitz', title = 'Blitz', menu = 'pa_policia_menu', options = opcoes })
+    lib.registerContext({ id = 'pa_policia_blitz', title = 'Blitz', options = opcoes })
     lib.showContext('pa_policia_blitz')
 end)
 RegisterCommand('blitz', function() TriggerEvent('pa_policia:client:menuBlitz') end, false)
+
+-- painel F6: coloca direto o objeto escolhido
+AddEventHandler('pa_policia:client:colocarObjeto', function(id)
+    if not PC.Pode('objetos') then return end
+    for _, o in ipairs(Config.objetos.lista) do
+        if o.id == id then return colocar(o) end
+    end
+end)
 
 -- recolher
 CreateThread(function()
@@ -238,6 +246,7 @@ end)
 -- RADAR MÓVEL (/radar)
 ---------------------------------------------------------------------
 local radarLigado = false
+function PC.RadarLigado() return radarLigado end
 
 local function veiculoNaDirecao(veh, frente)
     local origem = GetOffsetFromEntityInWorldCoords(veh, 0.0, frente and 3.0 or -3.0, 0.5)

@@ -264,38 +264,7 @@ CreateThread(function()
     end
 end)
 
----------------------------------------------------------------------
--- MENU RÁPIDO (F6)
----------------------------------------------------------------------
-local function abrirMenu()
-    if not PC.EmServico() then return end
-    local opcoes = {
-        { title = 'Tablet (MDT)', icon = 'tablet-screen-button', onSelect = function() ExecuteCommand('mdt') end },
-        { title = 'Ocorrências abertas', icon = 'tower-broadcast', onSelect = function() ExecuteCommand('ocorrencias') end },
-    }
-    if PC.Pode('objetos') then
-        opcoes[#opcoes + 1] = { title = 'Blitz (cones, barreiras, tapete)', icon = 'road-barrier', onSelect = function() TriggerEvent('pa_policia:client:menuBlitz') end }
-    end
-    if PC.Pode('radarMovel') then
-        opcoes[#opcoes + 1] = { title = 'Radar móvel da viatura', icon = 'gauge-high', onSelect = function() ExecuteCommand('radar') end }
-    end
-    if PC.Pode('pericia') then
-        opcoes[#opcoes + 1] = { title = 'Limpar cena (perícia)', icon = 'broom', onSelect = function()
-            local ok, msg = lib.callback.await('pa_policia:server:limparCena', false)
-            PC.Resultado(ok, msg)
-        end }
-    end
-    opcoes[#opcoes + 1] = { title = 'Botão de pânico', icon = 'triangle-exclamation', iconColor = '#E24B4A', onSelect = function() ExecuteCommand('panico') end }
-    lib.registerContext({ id = 'pa_policia_menu', title = ('LSPD · %s'):format(Config.patentes[PC.Grau()] or ''), options = opcoes })
-    lib.showContext('pa_policia_menu')
-end
-
-lib.addKeybind({
-    name = 'pa_policia_menu',
-    description = 'LSPD: menu do policial',
-    defaultKey = Config.teclas.menu,
-    onPressed = abrirMenu,
-})
+-- O menu do policial (F6) fica em client/painel.lua
 
 ---------------------------------------------------------------------
 -- ADMIN: copiar posição

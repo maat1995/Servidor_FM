@@ -23,6 +23,8 @@ client_scripts {
     'client/prisao.lua',
     'client/veicular.lua',
     'client/pericia.lua',
+    'client/crimes.lua',
+    'client/painel.lua',
 }
 
 server_scripts {
@@ -34,6 +36,7 @@ server_scripts {
     'server/prisao.lua',
     'server/veicular.lua',
     'server/pericia.lua',
+    'server/crimes.lua',
 }
 
 ui_page 'html/index.html'

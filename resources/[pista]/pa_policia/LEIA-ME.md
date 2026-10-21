@@ -20,10 +20,10 @@ O emprego agora começa **fora de serviço**: bata o ponto na recepção da DP d
 ## Teclas e comandos
 | Tecla / comando | O quê |
 |---|---|
-| **F6** | menu do policial (tablet, ocorrências, blitz, radar, limpar cena, pânico) |
+| **F6** | painel da LSPD (status, tablet, ocorrências, blitz, radar, limpar cena, GPS da DP, pânico); dá para andar com ele aberto |
 | **F5** / `/mdt` | tablet policial |
 | **Y** | assumir a ocorrência que acabou de chegar |
-| `/ocorrencias` | lista das ocorrências abertas (assumir, GPS, encerrar) |
+| `/ocorrencias` | abre o painel direto na lista de ocorrências (assumir, GPS, encerrar) |
 | `/panico` | botão de pânico (dá para pôr numa tecla em Configurações > Atalhos > FiveM) |
 | `/radar` | radar móvel da viatura (frente e trás, placa procurada pisca) |
 | `/blitz` | colocar cones, barreiras, iluminação e tapete de pregos |
@@ -35,6 +35,15 @@ O emprego agora começa **fora de serviço**: bata o ponto na recepção da DP d
 No olho (ox_target): jogador → algemar, algema com mãos à frente, conduzir, colocar na viatura, revistar, apreender, teste de pólvora, ficha no tablet.
 Veículo → tirar do veículo, vistoria, pátio/reter, coletar digital do volante, consultar placa.
 
+## Avisos de crime
+- Cada ocorrência chega como um card no canto da tela (código, título, suspeito/veículo, rua, distância ao vivo) com som de rádio por prioridade.
+- **Y** assume: traça a rota no GPS até a área (some quando você chega). Alta e máxima piscam no mapa até alguém assumir.
+- Crimes que avisam sozinhos (`Config.crimes`): tiro, tiro de dentro de veículo, roubo de veículo, briga, atropelamento e direção perigosa na cidade.
+  Cada um tem chance de testemunha, espera e raio próprios; avisos iguais perto um do outro viram um só.
+
+## Perícia
+- Cápsulas e sangue **só aparecem no facho da lanterna**: lanterna na mão mirando ou lanterna presa na arma ligada.
+
 ## Para outros scripts
 ```lua
 exports.pa_policia:policiaisEmServico()          -- número
@@ -42,6 +51,7 @@ exports.pa_policia:temPoliciaMinima(3)           -- true/false
 exports.pa_policia:temPermissao(src, 'licencas') -- patente + em serviço
 exports.pa_policia:alerta({ codigo = '10-31', titulo = 'Roubo de veículo', descricao = '...',
     coords = coords, raio = 150, prioridade = 'alta' })  -- raio 0 / exato = true: ponto exato
+exports.pa_policia:crime(src, 'rouboVeiculo', { veiculo = { modelo = 'Sultan', cor = 'prata', placa = '45A***' } })
 exports.pa_policia:multar(citizenid, valor, motivo)
 exports.pa_policia:prender(src, meses)
 ```

@@ -15,13 +15,24 @@ local function nomeDaArea(c)
 end
 PC.NomeDaArea = nomeDaArea
 
+local rotaAtiva -- id da ocorrência com rota no GPS
+
+local function tirarRota()
+    if rotaAtiva and alertas[rotaAtiva] and DoesBlipExist(alertas[rotaAtiva].centro) then
+        SetBlipRoute(alertas[rotaAtiva].centro, false)
+    end
+    rotaAtiva = nil
+end
+
 local function remover(id)
     local a = alertas[id]
     if not a then return end
+    if rotaAtiva == id then tirarRota() end
     if a.area and DoesBlipExist(a.area) then RemoveBlip(a.area) end
     if a.centro and DoesBlipExist(a.centro) then RemoveBlip(a.centro) end
     alertas[id] = nil
     if ultimoPendente and ultimoPendente.id == id then ultimoPendente = nil end
+    SendNUIMessage({ acao = 'cardRemover', id = id })
 end
 
 local function limparTodos()
@@ -33,13 +44,21 @@ local function assumir(id)
     local ok, centro = lib.callback.await('pa_policia:server:assumir', false, id)
     if not ok then return PC.Aviso(('A ocorrência #%s não existe mais.'):format(id), 'error') end
     local a = alertas[id]
+    tirarRota()
     if a then
         a.assumido = true
         SetBlipColour(a.centro, 2)
+        SetBlipFlashes(a.centro, false)
         if a.area then SetBlipColour(a.area, 2) end
+        if Config.alertas.rota then
+            SetBlipRoute(a.centro, true)
+            SetBlipRouteColour(a.centro, 2)
+            rotaAtiva = id
+        end
     end
-    SetNewWaypoint(centro.x, centro.y)
-    PC.Aviso(('Você assumiu a ocorrência #%s. GPS marcado.'):format(id), 'success')
+    if not a or not Config.alertas.rota then SetNewWaypoint(centro.x, centro.y) end
+    SendNUIMessage({ acao = 'cardAssumido', id = id, eu = true })
+    PlaySoundFrontend(-1, 'Menu_Accept', 'Phone_SoundSet_Default', true)
 end
 PC.AssumirOcorrencia = assumir
 
@@ -61,33 +80,54 @@ RegisterNetEvent('pa_policia:client:alerta', function(d)
     SetBlipColour(centro, CORES[d.prioridade] or 5)
     SetBlipScale(centro, d.prioridade == 'maxima' and 1.2 or 0.9)
     SetBlipAsShortRange(centro, false)
-    if d.prioridade == 'maxima' then SetBlipFlashes(centro, true) end
+    -- alta e máxima piscam no mapa até alguém assumir
+    if d.prioridade == 'alta' or d.prioridade == 'maxima' then SetBlipFlashes(centro, true) end
     BeginTextCommandSetBlipName('STRING')
     AddTextComponentSubstringPlayerName(('%s #%s · %s'):format(d.codigo, d.id, d.titulo))
     EndTextCommandSetBlipName(centro)
 
-    alertas[d.id] = { area = area, centro = centro, pos = c, assumido = #(d.policiais or {}) > 0, dados = d }
+    local assumidos = d.policiais or {}
+    alertas[d.id] = { area = area, centro = centro, pos = c, assumido = #assumidos > 0, dados = d }
     ultimoPendente = { id = d.id, expira = GetGameTimer() + Config.alertas.tempoAceitar * 1000 }
 
-    if d.som ~= false and Config.alertas.som then
-        if d.prioridade == 'maxima' then
-            PlaySoundFrontend(-1, 'TIMER_STOP', 'HUD_MINI_GAME_SOUNDSET', true)
-            PlaySoundFrontend(-1, 'Beep_Red', 'DLC_HEIST_HACKING_SNAKE_SOUNDS', true)
-        else
-            PlaySoundFrontend(-1, 'Event_Start_Text', 'GTAO_FM_Events_Soundset', false)
+    local zona = GetLabelText(GetNameOfZone(c.x, c.y, c.z))
+    if not zona or zona == 'NULL' or zona == '' then zona = 'Los Santos' end
+    local rua = GetStreetNameFromHashKey(GetStreetNameAtCoord(c.x, c.y, c.z))
+    SendNUIMessage({
+        acao = 'cardNovo',
+        card = {
+            id = d.id, codigo = d.codigo, titulo = d.titulo, descricao = d.descricao,
+            prioridade = d.prioridade, rua = rua ~= '' and rua or nil, zona = zona,
+            exato = not d.raio or d.raio <= 0,
+            distancia = math.floor(#(GetEntityCoords(cache.ped) - vec3(c.x, c.y, c.z))),
+            tecla = Config.alertas.teclaAceitar,
+            duracao = Config.alertas.tempoAceitar,
+            policiais = assumidos,
+            som = d.som ~= false and Config.alertas.som,
+            max = Config.alertas.maxCards,
+        },
+    })
+end)
+
+-- distância ao vivo nos cards
+CreateThread(function()
+    while true do
+        Wait(1000)
+        if next(alertas) then
+            local pos = GetEntityCoords(cache.ped)
+            local dist = {}
+            for id, a in pairs(alertas) do
+                dist[#dist + 1] = { id = id, d = math.floor(#(pos - vec3(a.pos.x, a.pos.y, a.pos.z))) }
+            end
+            SendNUIMessage({ acao = 'cardDistancias', lista = dist })
+            -- chegou na área: desliga a rota
+            if rotaAtiva and alertas[rotaAtiva] then
+                local a = alertas[rotaAtiva]
+                local raio = (a.dados.raio or 0) > 0 and a.dados.raio * 0.5 or 25.0
+                if #(pos - vec3(a.pos.x, a.pos.y, a.pos.z)) < raio then tirarRota() end
+            end
         end
     end
-
-    local texto = ('%s\nRegião: %s\n[%s] assumir'):format(d.descricao or '', nomeDaArea(c), Config.alertas.teclaAceitar)
-    lib.notify({
-        id = 'pa_policia_alerta_' .. d.id,
-        title = ('%s #%s · %s'):format(d.codigo, d.id, d.titulo),
-        description = texto:gsub('^\n', ''),
-        type = d.prioridade == 'baixa' and 'inform' or 'error',
-        icon = d.prioridade == 'maxima' and 'triangle-exclamation' or 'tower-broadcast',
-        duration = Config.alertas.tempoAceitar * 1000,
-        position = 'top-right',
-    })
 end)
 
 RegisterNetEvent('pa_policia:client:ocorrenciaAssumida', function(id, nome, quem)
@@ -98,9 +138,10 @@ RegisterNetEvent('pa_policia:client:ocorrenciaAssumida', function(id, nome, quem
     if a and not a.assumido then
         a.assumido = true
         SetBlipColour(a.centro, 40)
+        SetBlipFlashes(a.centro, false)
         if a.area then SetBlipAlpha(a.area, 50) end
     end
-    lib.notify({ type = 'inform', description = ('#%s assumida por %s.'):format(id, nome) })
+    SendNUIMessage({ acao = 'cardAssumido', id = id, nome = nome })
 end)
 
 RegisterNetEvent('pa_policia:client:fecharOcorrencia', function(id)
@@ -121,43 +162,7 @@ lib.addKeybind({
     end,
 })
 
----------------------------------------------------------------------
--- /ocorrencias
----------------------------------------------------------------------
-RegisterCommand('ocorrencias', function()
-    if not PC.EmServico() then return PC.Aviso('Só policiais em serviço.', 'error') end
-    local lista = lib.callback.await('pa_policia:server:ocorrencias', false) or {}
-    if #lista == 0 then return PC.Aviso('Nenhuma ocorrência aberta.', 'inform') end
-    local opcoes = {}
-    for _, o in ipairs(lista) do
-        local quem = #o.policiais > 0 and ('Com: ' .. table.concat(o.policiais, ', ')) or 'Ninguém assumiu'
-        opcoes[#opcoes + 1] = {
-            title = ('%s #%s · %s'):format(o.codigo, o.id, o.titulo),
-            description = ('%s · %s · há %d min'):format(nomeDaArea(o.centro), quem, math.floor((GetCloudTimeAsInt() - o.criado) / 60)),
-            icon = o.prioridade == 'maxima' and 'triangle-exclamation' or 'tower-broadcast',
-            iconColor = (o.prioridade == 'alta' or o.prioridade == 'maxima') and '#E24B4A' or nil,
-            arrow = true,
-            onSelect = function()
-                lib.registerContext({
-                    id = 'pa_policia_ocorrencia',
-                    title = ('#%s · %s'):format(o.id, o.titulo),
-                    menu = 'pa_policia_ocorrencias',
-                    options = {
-                        { title = 'Assumir e marcar GPS', icon = 'location-arrow', onSelect = function() assumir(o.id) end },
-                        { title = 'Só marcar GPS', icon = 'map-pin', onSelect = function() SetNewWaypoint(o.centro.x, o.centro.y) end },
-                        { title = 'Encerrar ocorrência', icon = 'check', onSelect = function()
-                            local ok, msg = lib.callback.await('pa_policia:server:encerrar', false, o.id)
-                            PC.Resultado(ok, ok and 'Ocorrência encerrada.' or msg)
-                        end },
-                    },
-                })
-                lib.showContext('pa_policia_ocorrencia')
-            end,
-        }
-    end
-    lib.registerContext({ id = 'pa_policia_ocorrencias', title = 'Ocorrências abertas', options = opcoes })
-    lib.showContext('pa_policia_ocorrencias')
-end, false)
+-- /ocorrencias fica no painel (client/painel.lua)
 
 ---------------------------------------------------------------------
 -- PÂNICO

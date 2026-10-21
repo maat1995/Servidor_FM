@@ -24,7 +24,10 @@ CreateThread(function()
                 ultimo = GetGameTimer()
                 local c = GetOffsetFromEntityInWorldCoords(cache.ped, math.random(-10, 10) / 10, math.random(5, 15) / 10, 0.0)
                 local ok, z = GetGroundZFor_3dCoord(c.x, c.y, c.z + 1.0, false)
-                TriggerServerEvent('pa_policia:server:tiro', vec3(c.x, c.y, ok and z or c.z - 0.9))
+                TriggerServerEvent('pa_policia:server:tiro', vec3(c.x, c.y, ok and z or c.z - 0.9), {
+                    silenciado = IsPedCurrentWeaponSilenced(cache.ped),
+                    veiculo = cache.vehicle and PC.InfoVeiculo(cache.vehicle) or nil,
+                })
             end
         end
         Wait(espera)
@@ -96,36 +99,70 @@ end
 
 local coletando = false
 
+-- lanterna acesa: lanterna na mão mirando ou lanterna presa na arma ligada
+local function lanternaAcesa()
+    if IsFlashLightOn(cache.ped) then return true end
+    return cache.weapon == `WEAPON_FLASHLIGHT` and IsPlayerFreeAiming(cache.playerId)
+end
+
+-- a evidência está dentro do facho? (cone a partir da câmera, para onde a lanterna aponta)
+local function noFacho(origem, direcao, alvo)
+    local v = alvo - origem
+    local d = #v
+    if d > Config.pericia.distanciaVer or d < 0.01 then return false, d end
+    local cos = (v.x * direcao.x + v.y * direcao.y + v.z * direcao.z) / d
+    return cos >= math.cos(math.rad(Config.pericia.anguloLanterna)), d
+end
+
+local function direcaoCamera()
+    local rot = GetGameplayCamRot(2)
+    local rx, rz = math.rad(rot.x), math.rad(rot.z)
+    return vec3(-math.sin(rz) * math.abs(math.cos(rx)), math.cos(rz) * math.abs(math.cos(rx)), math.sin(rx))
+end
+
 CreateThread(function()
     while true do
         local espera = 1000
         if next(evidencias) and PC.Pode('pericia') then
             local pos = GetEntityCoords(cache.ped)
-            local lanterna = cache.weapon == `WEAPON_FLASHLIGHT` and IsPlayerFreeAiming(cache.playerId)
-            local maisPerto, distPerto
+            local perto = false
             for _, e in pairs(evidencias) do
-                local d = #(pos - e.coords)
-                if d < 25.0 then espera = 0 end
-                if (lanterna and d < 25.0) or d < 2.5 then
-                    local cor = e.tipo == 'sangue' and { 200, 20, 20 } or { 230, 190, 40 }
-                    DrawMarker(28, e.coords.x, e.coords.y, e.coords.z + 0.05, 0, 0, 0, 0, 0, 0, 0.12, 0.12, 0.12, cor[1], cor[2], cor[3], 200, false, false, 2, false, nil, nil, false)
-                    if d < 6.0 then texto3d(e.coords, e.rotulo) end
-                    if d < 1.5 and (not distPerto or d < distPerto) then maisPerto, distPerto = e, d end
-                end
+                if #(pos - e.coords) < 30.0 then perto = true break end
             end
-            if maisPerto and not coletando then
-                texto3d(maisPerto.coords + vec3(0, 0, 0.15), '[E] Coletar')
-                if IsControlJustPressed(0, 38) then
-                    coletando = true
-                    local alvo = maisPerto
-                    CreateThread(function()
-                        if lib.progressCircle({ duration = 2500, label = 'Coletando evidência...', position = 'bottom', canCancel = true,
-                            disable = { move = true, combat = true }, anim = { dict = 'pickup_object', clip = 'pickup_low' } }) then
-                            local ok, msg = lib.callback.await('pa_policia:server:coletar', false, alvo.id, PC.NomeDaArea(alvo.coords))
-                            PC.Resultado(ok, msg)
+            if perto then espera = 200 end
+            if perto and lanternaAcesa() then
+                espera = 0
+                local cam = GetGameplayCamCoord()
+                local dir = direcaoCamera()
+                local maisPerto, distPerto
+                for _, e in pairs(evidencias) do
+                    local visivel = noFacho(cam, dir, e.coords)
+                    if visivel then
+                        local dPed = #(pos - e.coords)
+                        -- brilho pequeno no chão, como metal/sangue refletindo a luz
+                        if e.tipo == 'sangue' then
+                            DrawMarker(23, e.coords.x, e.coords.y, e.coords.z + 0.02, 0, 0, 0, 0, 0, 0, 0.18, 0.18, 0.18, 120, 0, 0, 170, false, false, 2, false, nil, nil, false)
+                        else
+                            DrawMarker(28, e.coords.x, e.coords.y, e.coords.z + 0.03, 0, 0, 0, 0, 0, 0, 0.035, 0.035, 0.035, 255, 205, 90, 230, false, false, 2, false, nil, nil, false)
                         end
-                        coletando = false
-                    end)
+                        if dPed < 2.5 then texto3d(e.coords, e.rotulo) end
+                        if dPed < 1.5 and (not distPerto or dPed < distPerto) then maisPerto, distPerto = e, dPed end
+                    end
+                end
+                if maisPerto and not coletando then
+                    texto3d(maisPerto.coords + vec3(0, 0, 0.15), '[E] Coletar')
+                    if IsControlJustPressed(0, 38) then
+                        coletando = true
+                        local alvo = maisPerto
+                        CreateThread(function()
+                            if lib.progressCircle({ duration = 2500, label = 'Coletando evidência...', position = 'bottom', canCancel = true,
+                                disable = { move = true, combat = true }, anim = { dict = 'pickup_object', clip = 'pickup_low' } }) then
+                                local ok, msg = lib.callback.await('pa_policia:server:coletar', false, alvo.id, PC.NomeDaArea(alvo.coords))
+                                PC.Resultado(ok, msg)
+                            end
+                            coletando = false
+                        end)
+                    end
                 end
             end
         end

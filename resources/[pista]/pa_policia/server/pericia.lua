@@ -6,7 +6,6 @@ local evidencias = {}     -- [id] = { id, tipo, coords, criado, dados }
 local proxId = 0
 local ultimoTiro = {}     -- [src] = os.time()  (teste de pólvora)
 local ultimaCapsula = {}  -- [src] = GetGameTimer() (limite de cápsulas por segundo)
-local ultimoAlertaTiro = {}
 local ultimoSangue = {}
 local digitais = {}       -- [netId] = { { fp, cid, t }, ... }
 
@@ -59,7 +58,7 @@ end
 ---------------------------------------------------------------------
 -- TIRO: cápsula + alerta + pólvora na mão
 ---------------------------------------------------------------------
-RegisterNetEvent('pa_policia:server:tiro', function(coords)
+RegisterNetEvent('pa_policia:server:tiro', function(coords, info)
     local src = source
     if type(coords) ~= 'vector3' then return end
     if P.Dist(src, coords) > 6.0 then return end
@@ -79,13 +78,10 @@ RegisterNetEvent('pa_policia:server:tiro', function(coords)
         policial = policial,
     })
 
-    -- alerta de disparo (civil)
-    local t = Config.alertas.tiros
-    if t and t.ativo and not policial then
-        if os.time() - (ultimoAlertaTiro[src] or 0) >= t.espera then
-            ultimoAlertaTiro[src] = os.time()
-            P.Alerta({ codigo = '10-71', titulo = 'Disparo de arma de fogo', coords = coords, raio = t.raio, prioridade = 'alta', sprite = 110 })
-        end
+    -- alerta de disparo (testemunha liga para o 190)
+    if not policial then
+        info = type(info) == 'table' and info or {}
+        P.Crime(src, info.veiculo and 'tiroVeiculo' or 'tiro', info)
     end
 end)
 
@@ -268,7 +264,6 @@ AddEventHandler('playerDropped', function()
     local src = source
     ultimoTiro[src] = nil
     ultimaCapsula[src] = nil
-    ultimoAlertaTiro[src] = nil
     ultimoSangue[src] = nil
 end)
 

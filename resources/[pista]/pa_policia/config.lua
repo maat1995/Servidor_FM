@@ -132,9 +132,47 @@ Config.alertas = {
     teclaAceitar = 'Y',
     som = true,
     raioPadrao = 120.0,     -- área aproximada quando o script não manda o raio
-    -- disparo de arma por civil vira alerta automático (área aproximada)
-    tiros = { ativo = true, espera = 60, raio = 150.0 },
+    maxCards = 4,           -- avisos empilhados na tela ao mesmo tempo
+    rota = true,            -- ao assumir, traça a rota no GPS até a área
 }
+
+---------------------------------------------------------------------
+-- CRIMES QUE AVISAM A POLÍCIA SOZINHOS (testemunha liga para o 190)
+-- chance = % de alguém ver e ligar · espera = segundos entre avisos do mesmo jogador
+-- raio = tamanho da área no mapa (a polícia não vê o ponto exato)
+-- Policial em serviço não gera aviso.
+---------------------------------------------------------------------
+Config.crimes = {
+    tiro = {
+        ativo = true, codigo = '10-71', titulo = 'Disparo de arma de fogo', prioridade = 'alta',
+        raio = 150.0, chance = 100, espera = 60, sprite = 110,
+        silenciadorAvisa = 25,      -- % de chance quando a arma tem silenciador
+    },
+    tiroVeiculo = {
+        ativo = true, codigo = '10-71', titulo = 'Disparo de dentro de veículo', prioridade = 'alta',
+        raio = 150.0, chance = 100, espera = 60, sprite = 229,
+    },
+    rouboVeiculo = {
+        ativo = true, codigo = '10-16', titulo = 'Roubo de veículo', prioridade = 'media',
+        raio = 120.0, chance = 70, espera = 120, sprite = 225,
+    },
+    briga = {
+        ativo = true, codigo = '10-10', titulo = 'Briga / agressão', prioridade = 'baixa',
+        raio = 80.0, chance = 40, espera = 120, sprite = 311,
+    },
+    atropelamento = {
+        ativo = true, codigo = '10-50', titulo = 'Atropelamento', prioridade = 'media',
+        raio = 100.0, chance = 60, espera = 90, sprite = 380,
+    },
+    direcaoPerigosa = {
+        ativo = true, codigo = '10-94', titulo = 'Direção perigosa / racha', prioridade = 'baixa',
+        raio = 220.0, chance = 20, espera = 300, sprite = 227,
+        velocidade = 170,           -- km/h por alguns segundos dentro da cidade
+        segundos = 6,
+    },
+}
+-- dois avisos iguais perto um do outro viram um só (gangue atirando junto)
+Config.crimesAgrupar = { distancia = 80.0, segundos = 45 }
 
 -- Botão de pânico
 Config.panico = {
@@ -340,7 +378,9 @@ Config.pericia = {
     itemVazio = 'empty_evidence_bag',
     itemCheio = 'filled_evidence_bag',
     duracao = 3600,                 -- segundos que a evidência fica no chão
-    distanciaVer = 8.0,             -- só aparece com a lanterna ligada (mirando) ou de perto
+    -- evidências só aparecem no facho da lanterna (lanterna na mão mirando ou lanterna da arma ligada)
+    distanciaVer = 15.0,            -- alcance da lanterna
+    anguloLanterna = 22.0,          -- abertura do facho (graus)
     -- cápsulas: armas que não deixam cápsula
     semCapsula = {
         WEAPON_STUNGUN = true, WEAPON_PETROLCAN = true, WEAPON_FIREEXTINGUISHER = true, WEAPON_FLARE = true,

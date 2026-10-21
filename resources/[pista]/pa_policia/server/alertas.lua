@@ -119,6 +119,25 @@ lib.callback.register('pa_policia:server:ocorrencias', function(src)
     return P.ListarOcorrencias()
 end)
 
+-- Painel do policial (F6)
+lib.callback.register('pa_policia:server:painel', function(src)
+    local p = P.Player(src)
+    if not p or p.PlayerData.job.name ~= Config.job then return nil end
+    local grau = P.Grau(src)
+    local perms = {}
+    for acao, min in pairs(Config.permissoes) do perms[acao] = grau >= min end
+    local distintivo = p.PlayerData.metadata.callsign
+    return {
+        nome = P.Nome(src),
+        patente = P.Patente(grau),
+        distintivo = distintivo ~= 'NO CALLSIGN' and distintivo or nil,
+        servico = p.PlayerData.job.onduty == true,
+        colegas = (P.PoliciaisEmServico()),
+        ocorrencias = p.PlayerData.job.onduty and P.ListarOcorrencias() or {},
+        perms = perms,
+    }
+end)
+
 -- Quem entra em serviço recebe as ocorrências abertas
 AddEventHandler('QBCore:Server:SetDuty', function(src, emServico)
     if not emServico or not P.EmServico(src) then return end
