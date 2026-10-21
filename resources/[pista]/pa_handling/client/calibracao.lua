@@ -47,7 +47,19 @@ local function medir(hash, origem, heading, alvo)
     local st = Entity(veh).state
     st:set('pa_cambio_auto', true, true)  -- câmbio automático no teste
     st:set('fuel', 100.0, true)
-    TriggerServerEvent('pa_handling:server:chaves', VehToNet(veh))
+    -- Chave antes de sentar: sem ela o qbx_vehiclekeys desliga o motor e trava o acelerador
+    local limiteRede = GetGameTimer() + 5000
+    while not NetworkGetEntityIsNetworked(veh) and GetGameTimer() < limiteRede do Wait(0) end
+    local temChave = lib.callback.await('pa_handling:server:chaves', false, VehToNet(veh))
+    if temChave then
+        local limiteChave = GetGameTimer() + 5000
+        while GetGameTimer() < limiteChave do
+            local sid = Entity(veh).state.sessionId
+            local lista = LocalPlayer.state.keysList
+            if sid and lista and lista[sid] then break end
+            Wait(50)
+        end
+    end
     TaskWarpPedIntoVehicle(ped, veh, -1)
     Wait(300)
     SetVehicleEngineOn(veh, true, true, false)

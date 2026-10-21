@@ -84,14 +84,18 @@ AddEventHandler('playerDropped', function()
 end)
 
 -- Chave do carro de teste (sem chave alguns scripts desligam o motor)
-RegisterNetEvent('pa_handling:server:chaves', function(netId)
-    local src = source
-    if not calibrando[src] then return end
-    local veh = NetworkGetEntityFromNetworkId(netId)
-    if veh == 0 then return end
-    if GetResourceState('qbx_vehiclekeys') == 'started' then
-        pcall(function() exports.qbx_vehiclekeys:GiveKeys(src, veh, true) end)
+lib.callback.register('pa_handling:server:chaves', function(src, netId)
+    if not calibrando[src] or GetResourceState('qbx_vehiclekeys') ~= 'started' then return false end
+    -- o carro acabou de nascer no cliente: espera o servidor enxergar
+    local veh, limite = 0, GetGameTimer() + 5000
+    while GetGameTimer() < limite do
+        veh = NetworkGetEntityFromNetworkId(netId)
+        if veh ~= 0 and DoesEntityExist(veh) then break end
+        Wait(50)
     end
+    if veh == 0 then return false end
+    local ok = pcall(function() exports.qbx_vehiclekeys:GiveKeys(src, veh, true) end)
+    return ok
 end)
 
 local function numero(v) return type(v) == 'number' and v == v and v > 0 and v < 100000 end
