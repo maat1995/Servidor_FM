@@ -355,7 +355,7 @@ Config.radares = {
 
 -- Radar móvel na viatura (/radar)
 Config.radarMovel = {
-    distancia = 60.0,
+    distancia = 80.0,   -- alcance (m) para frente e para trás
 }
 
 -- Pátio

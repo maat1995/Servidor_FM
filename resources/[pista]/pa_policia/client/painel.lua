@@ -79,6 +79,12 @@ local ACOES = {}
 
 ACOES.fechar = function() fechar() end
 
+ACOES.widgets = function()
+    fechar()
+    Wait(50)
+    TriggerEvent('pa_policia:client:moverWidgets')
+end
+
 ACOES.atualizar = function()
     local d = dadosPainel()
     if d then SendNUIMessage({ acao = 'painelDados', dados = d }) end

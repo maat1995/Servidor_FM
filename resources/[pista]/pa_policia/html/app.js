@@ -701,6 +701,7 @@ function desenharPainel() {
     })));
 }
 $('#p-fechar').onclick = () => painelAcao('fechar');
+$('#p-mover').onclick = () => painelAcao('widgets');
 
 // ================================================================== mensagens novas
 window.addEventListener('message', ({ data }) => {
@@ -738,3 +739,134 @@ window.addEventListener('message', ({ data }) => {
             break;
     }
 });
+
+// ================================================================== POSIÇÃO DOS WIDGETS
+const WIDGETS = {
+    radar: { sel: '#radar', nome: 'Radar móvel' },
+    cards: { sel: '#cards', nome: 'Avisos de ocorrência' },
+    painel: { sel: '#painel', nome: 'Painel F6' },
+};
+let posicoes = {};      // { id: { x, y, s, baixo } } x/y em % da tela
+let editandoW = false;
+let antesDeEditar = null;
+
+function aplicarWidget(id) {
+    const el = $(WIDGETS[id].sel);
+    const p = posicoes[id];
+    // volta ao padrão do CSS
+    ['left', 'top', 'right', 'bottom', 'transform', 'transformOrigin', 'animation', 'flexDirection'].forEach((k) => (el.style[k] = ''));
+    if (!p) return;
+    el.style.left = p.x + '%';
+    el.style.right = 'auto';
+    el.style.transformOrigin = p.baixo ? 'bottom left' : 'top left';
+    el.style.transform = `scale(${p.s || 1})`;
+    el.style.animation = 'none';
+    if (p.baixo) {
+        el.style.top = 'auto';
+        el.style.bottom = p.b + '%';
+        if (id === 'cards') el.style.flexDirection = 'column-reverse';
+    } else {
+        el.style.top = p.y + '%';
+        el.style.bottom = 'auto';
+    }
+}
+const aplicarTodos = () => Object.keys(WIDGETS).forEach(aplicarWidget);
+
+// carrega o que o jogador salvou
+post('widgetsPedir').then((txt) => {
+    try { posicoes = typeof txt === 'string' ? JSON.parse(txt) : (txt || {}); } catch { posicoes = {}; }
+    aplicarTodos();
+});
+
+// conteúdo de exemplo enquanto edita
+const EXEMPLO_CARD = { id: -1, codigo: '10-71', titulo: 'Exemplo de ocorrência', descricao: 'Sultan prata · placa 45A*** · Suspeito: homem',
+    prioridade: 'alta', rua: 'Grove St', zona: 'Davis', distancia: 840, tecla: 'Y', duracao: 9999, som: false, max: 4, policiais: [] };
+
+function prepararExemplos(ligar) {
+    const radar = $('#radar'), painel = $('#painel');
+    if (ligar) {
+        antesDeEditar = { radar: radar.classList.contains('oculto'), painel: painel.classList.contains('oculto'), P: P_ };
+        radar.classList.remove('oculto');
+        painel.classList.remove('oculto');
+        if (!P_) { P_ = { nome: 'Seu nome', patente: 'Patente', servico: true, colegas: 0, ocorrencias: [], perms: {}, objetos: [] }; vista = 'inicio'; desenharPainel(); }
+        if (!cards.size) novoCard(EXEMPLO_CARD);
+    } else if (antesDeEditar) {
+        radar.classList.toggle('oculto', antesDeEditar.radar);
+        painel.classList.toggle('oculto', antesDeEditar.painel);
+        P_ = antesDeEditar.P;
+        removerCard(-1);
+    }
+}
+
+function lerPosicao(id) {
+    const el = $(WIDGETS[id].sel);
+    const r = el.getBoundingClientRect();
+    const W = window.innerWidth, H = window.innerHeight;
+    const s = posicoes[id]?.s || 1;
+    const baixo = (r.top + r.height / 2) > H / 2;
+    return { x: +(r.left / W * 100).toFixed(2), y: +(r.top / H * 100).toFixed(2), b: +((H - r.bottom) / H * 100).toFixed(2), s, baixo };
+}
+
+function iniciarEdicao() {
+    editandoW = true;
+    const salvo = JSON.parse(JSON.stringify(posicoes));
+    $('#editor').classList.remove('oculto');
+    prepararExemplos(true);
+    for (const [id, w] of Object.entries(WIDGETS)) {
+        const el = $(w.sel);
+        el.classList.add('editavel');
+        el.dataset.nome = w.nome;
+        el.onmousedown = (e) => {
+            e.preventDefault();
+            const r = el.getBoundingClientRect();
+            const dx = e.clientX - r.left, dy = e.clientY - r.top;
+            // fixa pelo topo/esquerda durante o arraste
+            posicoes[id] = { ...lerPosicao(id), baixo: false };
+            aplicarWidget(id);
+            el.classList.add('arrastando');
+            const mover = (ev) => {
+                const W = window.innerWidth, H = window.innerHeight;
+                const x = Math.min(Math.max(ev.clientX - dx, 0), W - 40);
+                const y = Math.min(Math.max(ev.clientY - dy, 0), H - 30);
+                posicoes[id].x = +(x / W * 100).toFixed(2);
+                posicoes[id].y = +(y / H * 100).toFixed(2);
+                aplicarWidget(id);
+            };
+            const soltar = () => {
+                document.removeEventListener('mousemove', mover);
+                document.removeEventListener('mouseup', soltar);
+                el.classList.remove('arrastando');
+                posicoes[id] = lerPosicao(id);
+                aplicarWidget(id);
+            };
+            document.addEventListener('mousemove', mover);
+            document.addEventListener('mouseup', soltar);
+        };
+        el.onwheel = (e) => {
+            e.preventDefault();
+            const atual = posicoes[id] || lerPosicao(id);
+            atual.s = Math.min(1.6, Math.max(0.6, +((atual.s || 1) + (e.deltaY < 0 ? 0.05 : -0.05)).toFixed(2)));
+            posicoes[id] = atual;
+            aplicarWidget(id);
+        };
+    }
+    const terminar = (salvar) => {
+        editandoW = false;
+        $('#editor').classList.add('oculto');
+        for (const w of Object.values(WIDGETS)) {
+            const el = $(w.sel);
+            el.classList.remove('editavel', 'arrastando');
+            el.onmousedown = null; el.onwheel = null;
+        }
+        if (!salvar) posicoes = salvo;
+        aplicarTodos();
+        prepararExemplos(false);
+        post(salvar ? 'widgetsSalvar' : 'widgetsCancelar', salvar ? posicoes : {});
+    };
+    $('#ed-salvar').onclick = () => terminar(true);
+    $('#ed-cancelar').onclick = () => terminar(false);
+    $('#ed-padrao').onclick = () => { posicoes = {}; aplicarTodos(); };
+}
+
+document.addEventListener('keydown', (e) => { if (editandoW && e.key === 'Escape') $('#ed-cancelar').click(); });
+window.addEventListener('message', ({ data }) => { if (data && data.acao === 'widgetsEditar' && !editandoW) iniciarEdicao(); });

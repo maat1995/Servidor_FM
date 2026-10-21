@@ -25,6 +25,7 @@ client_scripts {
     'client/pericia.lua',
     'client/crimes.lua',
     'client/painel.lua',
+    'client/widgets.lua',
 }
 
 server_scripts {

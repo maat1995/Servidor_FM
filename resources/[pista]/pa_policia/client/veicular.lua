@@ -28,7 +28,7 @@ local function raycastFrente(dist)
         status, hit, coords = GetShapeTestResult(ray)
         Wait(0)
     until status ~= 1
-    if hit == 1 then return coords end
+    if hit == true or hit == 1 then return coords end
     return destino
 end
 
@@ -248,16 +248,25 @@ end)
 local radarLigado = false
 function PC.RadarLigado() return radarLigado end
 
+-- carro mais perto na frente (ou atrás) da viatura, dentro de uma faixa que abre com a distância
 local function veiculoNaDirecao(veh, frente)
-    local origem = GetOffsetFromEntityInWorldCoords(veh, 0.0, frente and 3.0 or -3.0, 0.5)
-    local destino = GetOffsetFromEntityInWorldCoords(veh, 0.0, frente and Config.radarMovel.distancia or -Config.radarMovel.distancia, 0.5)
-    local ray = StartShapeTestCapsule(origem.x, origem.y, origem.z, destino.x, destino.y, destino.z, 3.0, 10, veh, 7)
-    local status, hit, ent, _
-    repeat
-        status, hit, _, _, ent = GetShapeTestResult(ray)
-        if status == 1 then Wait(0) end
-    until status ~= 1
-    if hit == 1 and ent ~= 0 and IsEntityAVehicle(ent) then return ent end
+    local melhor, menor
+    local alcance = Config.radarMovel.distancia
+    local minha = GetEntityCoords(veh)
+    for _, outro in ipairs(GetGamePool('CVehicle')) do
+        if outro ~= veh and DoesEntityExist(outro) then
+            local pos = GetEntityCoords(outro)
+            if #(pos - minha) <= alcance then
+                local rel = GetOffsetFromEntityGivenWorldCoords(veh, pos.x, pos.y, pos.z)
+                local y = frente and rel.y or -rel.y
+                local largura = 3.5 + y * 0.12
+                if y > 2.0 and math.abs(rel.x) <= largura and math.abs(rel.z) < 6.0 and (not menor or y < menor) then
+                    melhor, menor = outro, y
+                end
+            end
+        end
+    end
+    return melhor
 end
 
 local function infoVeiculo(ent)

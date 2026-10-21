@@ -28,6 +28,7 @@ O emprego agora começa **fora de serviço**: bata o ponto na recepção da DP d
 | `/radar` | radar móvel da viatura (frente e trás, placa procurada pisca) |
 | `/blitz` | colocar cones, barreiras, iluminação e tapete de pregos |
 | `/distintivo 1-ADAM-12` | número do distintivo |
+| `/moverhudpolicia` (ou **Mover widgets** no F6) | arrastar radar, avisos e painel para onde quiser; roda do mouse muda o tamanho. Fica salvo no PC de cada jogador |
 | **X** (todos) | mãos para cima: deixa ser revistado sem algema |
 | `/pospolicia` (admin) | copia a posição atual em `vec4(...)` para ajustar o config |
 | **190** no celular | chamado para a polícia (área aproximada de quem ligou) |
