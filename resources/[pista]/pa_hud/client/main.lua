@@ -30,6 +30,8 @@ local function validarOpcoes(t)
     novo.bussola = t.bussola == true
     novo.esconderCheio = t.esconderCheio == true
     novo.oculto = t.oculto == true
+    novo.tema = (t.tema == 'classico') and 'classico' or 'vice'
+    novo.dinheiro = t.dinheiro == true
     return novo
 end
 
@@ -43,6 +45,7 @@ local function enviarConfig()
             alertaStatus = Config.alertaStatus,
             temperatura = Config.temperatura,
             motorAlerta = Config.motorAlerta,
+            statusAoMudar = Config.vice.statusAoMudar,
         },
     })
 end
@@ -91,6 +94,92 @@ local function bussola(ped)
     end
 
     return { indice = i, graus = math.floor(graus), rua = ruaCache.nome, zona = ruaCache.zona }
+end
+
+---------------------------------------------------------------------
+-- Tema Vice: dinheiro, GPS, pontos na bússola e perseguição
+---------------------------------------------------------------------
+local function dinheiro()
+    local m = (QBX and QBX.PlayerData and QBX.PlayerData.money) or {}
+    return { mao = math.floor(m.cash or 0), banco = math.floor(m.bank or 0) }
+end
+
+local rotaPintada = 0
+local function gps()
+    if not IsWaypointActive() then return false end
+    local blip = GetFirstBlipInfoId(8)
+    if Config.vice.corRota and blip ~= 0 and blip ~= rotaPintada then
+        rotaPintada = blip
+        SetBlipRouteColour(blip, Config.vice.corRota)
+    end
+    local dist = GetGpsBlipRouteLength()
+    if not dist or dist <= 0 then
+        local c, w = GetEntityCoords(cache.ped), GetBlipInfoIdCoord(blip)
+        dist = #(vec2(c.x, c.y) - vec2(w.x, w.y))
+    end
+    return { dist = math.floor(dist) }
+end
+
+-- Rumo de bússola (graus no sentido horário a partir do norte)
+local function rumo(de, para)
+    local h = math.deg(math.atan(-(para.x - de.x), para.y - de.y))
+    return (360.0 - h) % 360.0
+end
+
+local pontosCache = { t = 0, lista = {} }
+local function pontos()
+    local agora = GetGameTimer()
+    if agora - pontosCache.t < 500 then return pontosCache.lista end
+    pontosCache.t = agora
+
+    local c = GetEntityCoords(cache.ped)
+    local lista = {}
+    for _, p in ipairs(Config.vice.pontos) do
+        local blip = GetFirstBlipInfoId(p.sprite)
+        local n = 0
+        while DoesBlipExist(blip) and n < 30 do
+            n = n + 1
+            local b = GetBlipInfoIdCoord(blip)
+            local d = #(vec2(c.x, c.y) - vec2(b.x, b.y))
+            if d <= Config.vice.raioPontos and d > 5.0 then
+                lista[#lista + 1] = { r = math.floor(rumo(c, b)), cor = p.cor, forma = p.forma }
+            end
+            blip = GetNextBlipInfoId(p.sprite)
+        end
+    end
+    if IsWaypointActive() then
+        local w = GetBlipInfoIdCoord(GetFirstBlipInfoId(8))
+        lista[#lista + 1] = { r = math.floor(rumo(c, w)), cor = '#ED93B1', forma = 'bandeira', gps = true }
+    end
+    pontosCache.lista = lista
+    return lista
+end
+
+local perseguicaoScript = false
+local perseguicaoCache = { t = 0, valor = false }
+local function perseguicao()
+    if perseguicaoScript then return true end
+    local agora = GetGameTimer()
+    if agora - perseguicaoCache.t < 1000 then return perseguicaoCache.valor end
+    perseguicaoCache.t = agora
+
+    local cfg = Config.vice.perseguicao
+    local job = QBX and QBX.PlayerData and QBX.PlayerData.job
+    if cfg.ignorarPolicia and job and job.type == 'leo' and job.onduty then
+        perseguicaoCache.valor = false
+        return false
+    end
+    local c = GetEntityCoords(cache.ped)
+    local achou = false
+    for _, v in ipairs(GetGamePool('CVehicle')) do
+        if v ~= cache.vehicle and GetVehicleClass(v) == 18 and IsVehicleSirenOn(v)
+            and #(GetEntityCoords(v) - c) <= cfg.raio then
+            achou = true
+            break
+        end
+    end
+    perseguicaoCache.valor = achou
+    return achou
 end
 
 local function limitar(v) return math.max(0, math.min(100, math.floor(v + 0.5))) end
@@ -170,6 +259,25 @@ local function veiculo(veh)
             d.nitro = limitar(carga / Config.nitroCarga * 100)
         end
         if prep.motor or prep.motorQuebrado then d.semMotor = true end
+
+        -- PA Dash: com o painel instalado (sem chip = modo básico)
+        if prep.painel then
+            local cfg = Config.dash
+            local remap = type(prep.remap) == 'table' and prep.remap or {}
+            local lim = tonumber(remap.limitador) or cfg.limitadorPadrao
+            local r = d.rpm or 0.0
+            local pedal = GetControlNormal(0, 71)
+            d.dash = {
+                stage = tonumber(prep.chip) or 0,
+                completo = (tonumber(prep.chip) or 0) >= cfg.completoStage,
+                rpm = ligado and math.floor(cfg.marchaLenta + math.max(0.0, r - 0.2) / 0.8 * (lim - cfg.marchaLenta)) or 0,
+                limitador = lim,
+                troca = lim - cfg.shiftAntes,
+                faixa = cfg.faixaLeds,
+                corte = ligado and r >= cfg.corte,
+                afr = (ligado and pedal > 0.3) and (tonumber(remap.mistura) or 12.5) or 14.7,
+            }
+        end
     end
 
     return d
@@ -217,6 +325,12 @@ CreateThread(function()
                 voz = voz(),
                 bussola = opcoes.bussola and bussola(ped) or false,
                 veiculo = veh and veiculo(veh) or false,
+                vice = opcoes.tema == 'vice' and {
+                    dinheiro = dinheiro(),
+                    gps = gps(),
+                    pontos = opcoes.bussola and pontos() or {},
+                    perseguicao = perseguicao(),
+                } or false,
             })
         elseif visivelAntes ~= false then
             SendNUIMessage({ acao = 'esconder' })
@@ -294,6 +408,8 @@ RegisterNetEvent('qbx_hud:client:showHud', function() ocultoPorScript = false en
 ---------------------------------------------------------------------
 exports('ocultar', function(valor) ocultoPorScript = valor == true end)
 exports('visivel', function() return podeMostrar() end)
+-- Outros scripts (ex.: pa_policia) podem acender a perseguição na bússola
+exports('perseguicao', function(valor) perseguicaoScript = valor == true end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end

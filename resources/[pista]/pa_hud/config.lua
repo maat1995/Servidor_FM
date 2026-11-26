@@ -10,6 +10,8 @@ Config.padrao = {
     bussola = true,         -- bússola e nome da rua no topo
     esconderCheio = true,   -- fome, sede e colete somem quando estão cheios
     oculto = false,         -- modo cinema (esconde tudo)
+    tema = 'vice',          -- 'vice' (estilo GTA 6) ou 'classico' (velocímetro redondo)
+    dinheiro = true,        -- tema Vice: dinheiro sempre na tela (false = só quando muda)
 }
 
 -- Minimapa a pé (false = só aparece dentro do veículo)
@@ -31,6 +33,16 @@ Config.temperatura = {
     perigo = 110.0,         -- °C: fica vermelho
 }
 Config.motorAlerta = 30     -- vida do motor em % que acende o alerta
+
+-- PA Dash (painel digital, peça painel_digital do pista_tuning)
+Config.dash = {
+    marchaLenta = 900,      -- rpm do motor em marcha lenta
+    limitadorPadrao = 7000, -- rpm do corte quando o carro não tem remap gravado
+    shiftAntes = 300,       -- a barra pisca (hora de trocar) X rpm antes do corte
+    faixaLeds = 1500,       -- os LEDs começam a acender X rpm antes do ponto de troca
+    corte = 0.98,           -- giro do GTA (0 a 1) que conta como "bateu no corte"
+    completoStage = 2,      -- a partir desse stage do chip mostra turbo, lambda e temperatura
+}
 
 -- Aviso de XP do pista_skills na tela
 Config.xpNaTela = true
@@ -64,4 +76,24 @@ Config.estresse = {
         { min = 80, max = 90, tempo = 25000 },
         { min = 90, max = 100, tempo = 17000 },
     },
+}
+
+-- Tema Vice (estilo GTA 6)
+Config.vice = {
+    corRota = 8,            -- cor da rota do GPS no mapa (8 = rosa). false = não mexe
+    raioPontos = 600.0,     -- distância (m) para um ponto do mapa aparecer na bússola
+    -- Blips do mapa que aparecem na bússola (sprite do blip). forma: 'chave', 'bandeira', 'cruz', 'estrela', 'ponto'
+    pontos = {
+        { sprite = 446, cor = '#5DCAA5', forma = 'chave' },    -- mecânica
+        { sprite = 72,  cor = '#5DCAA5', forma = 'chave' },    -- LS Customs
+        { sprite = 315, cor = '#EF9F27', forma = 'bandeira' }, -- corrida
+        { sprite = 361, cor = '#FAC775', forma = 'ponto' },    -- posto de gasolina
+        { sprite = 61,  cor = '#F09595', forma = 'cruz' },     -- hospital
+        { sprite = 60,  cor = '#85B7EB', forma = 'estrela' },  -- polícia
+        { sprite = 52,  cor = '#97C459', forma = 'ponto' },    -- loja
+    },
+    -- Bússola pisca vermelho e azul quando uma viatura de sirene ligada está perto
+    perseguicao = { raio = 80.0, ignorarPolicia = true },
+    -- Barras de status aparecem por alguns segundos quando o valor muda
+    statusAoMudar = 5000,
 }

@@ -204,3 +204,36 @@ html, body {
     animation: pisca 1s infinite; }
 #cinto.preso { background: rgba(18, 18, 16, .62); color: var(--verde); animation: none; }
 #cinto svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ------------------------------------------------------------------
+   PA Dash (painel digital) - faixa em cima do velocímetro
+   ------------------------------------------------------------------ */
+#dash {
+    margin: 0 6px 6px;
+    padding: 6px 8px 5px;
+    background: rgba(10, 12, 14, .38);
+    border: 1px solid rgba(255, 255, 255, .06);
+    border-radius: 10px;
+    display: grid;
+    gap: 5px;
+}
+#dash-leds { display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px; }
+#dash-leds i { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .10); transition: background .05s; }
+#dash-leds i.on.g { background: #2fe36a; box-shadow: 0 0 6px rgba(47, 227, 106, .7); }
+#dash-leds i.on.a { background: #ffb21e; box-shadow: 0 0 6px rgba(255, 178, 30, .7); }
+#dash-leds i.on.r { background: #ff3b3b; box-shadow: 0 0 6px rgba(255, 59, 59, .7); }
+#dash-leds i.on.s { background: #3ba4ff; box-shadow: 0 0 10px rgba(59, 164, 255, .9); }
+#dash-linha {
+    display: flex; align-items: baseline; justify-content: center; gap: 4px;
+    font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; line-height: 1;
+}
+#dash-linha small { font-size: 10px; font-weight: 500; color: var(--mudo); margin-left: 2px; }
+#dash-linha .sep { width: 1px; height: 11px; background: rgba(255, 255, 255, .15); margin: 0 5px; align-self: center; }
+#dash-linha .pro { margin-left: 6px; }
+#dash.basico .pro, #dash.basico .sep { display: none; }
+#dash-alerta {
+    text-align: center; font-weight: 700; letter-spacing: .25em; font-size: 12px;
+    border-radius: 5px; padding: 2px 0; color: #000;
+}
+#dash-alerta.atencao { background: #3ba4ff; }
+#dash-alerta.perigo { background: var(--vermelho); }

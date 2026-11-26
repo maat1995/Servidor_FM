@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <title>pa_hud</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="vice.css">
 </head>
-<body>
+<body class="tema-vice">
     <div id="hud" class="oculto">
 
         <div id="bussola" class="bloco">
@@ -34,13 +35,23 @@
                 <svg viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
                 <div class="barra"><i></i></div>
             </div>
-            <div id="voz">
+            <div id="voz" class="voz">
                 <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
                 <span class="nivel"><b></b><b></b><b></b></span>
             </div>
         </div>
 
         <div id="velocimetro" class="bloco">
+            <div id="dash" class="oculto">
+                <div id="dash-leds"></div>
+                <div id="dash-linha">
+                    <span id="dash-rpm">0</span><small>rpm</small>
+                    <span class="sep"></span>
+                    <span class="pro" id="dash-turbo">0.0<small>bar</small></span>
+                    <span class="pro" id="dash-afr">14.7<small>λ</small></span>
+                </div>
+                <div id="dash-alerta" class="oculto"></div>
+            </div>
             <div id="cinto" class="oculto" title="Cinto">
                 <svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M8 21v-7l-2-5h12l-2 5v7M7 9l10 8"/></svg>
             </div>
@@ -66,12 +77,66 @@
             </div>
         </div>
 
+        <!-- Tema Vice (estilo GTA 6) -->
+        <div id="v-status" class="vice-bloco">
+            <div class="vb" id="vb-vida" data-cor="vida"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><div class="vt"><i></i></div></div>
+            <div class="vb" id="vb-colete" data-cor="colete"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg><div class="vt"><i></i></div></div>
+            <div class="vb" id="vb-fome" data-cor="fome"><svg viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1-3 4-3 7h3v11M16 3v18"/></svg><div class="vt"><i></i></div></div>
+            <div class="vb" id="vb-sede" data-cor="sede"><svg viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg><div class="vt"><i></i></div></div>
+            <div class="vb" id="vb-estresse" data-cor="estresse"><svg viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg><div class="vt"><i></i></div></div>
+            <div class="voz v-voz">
+                <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+                <span class="nivel"><b></b><b></b><b></b></span>
+            </div>
+        </div>
+
+        <div id="v-bussola" class="vice-bloco">
+            <div id="v-faixa"><div id="v-marcas"></div><div id="v-pontos"></div><span id="v-centro"></span></div>
+            <div id="v-rua"><span id="v-rua-nome"></span><span id="v-rua-zona"></span></div>
+        </div>
+
+        <div id="v-dinheiro" class="vice-bloco">
+            <div id="v-mao"></div>
+            <div id="v-banco"></div>
+        </div>
+
+        <div id="v-mapa" class="vice-bloco oculto">
+            <span id="v-gps" class="oculto"></span>
+        </div>
+
+        <div id="v-velo" class="vice-bloco oculto">
+            <div id="v-alerta" class="oculto"></div>
+            <div id="v-dash-lugar"></div>
+            <div id="v-linha">
+                <span id="v-vel">0</span>
+                <div id="v-marcha-box"><span id="v-marcha">N</span><small id="v-unidade">km/h</small></div>
+            </div>
+            <div id="v-giro"></div>
+            <div id="v-infos">
+                <div class="vi" id="vi-turbo"><span>Turbo</span><div class="vt"><i></i></div><b></b></div>
+                <div class="vi" id="vi-nitro"><span>Nitro</span><div class="vt"><i></i></div><b></b></div>
+                <div class="vi" id="vi-gas"><span>Gasolina</span><div class="vt"><i></i></div><b></b></div>
+            </div>
+            <div id="v-icones">
+                <span id="vc-temp" class="oculto" title="Temperatura"><svg viewBox="0 0 24 24"><path d="M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0zM12 17v-5"/></svg></span>
+                <span id="vc-motor" class="oculto" title="Motor"><svg viewBox="0 0 24 24"><path d="M3 10v6M3 13h3M6 9h3V7h5v2h2l3 3v4h-2v2H9l-3-3z"/></svg></span>
+                <span id="vc-cinto" class="oculto" title="Cinto"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M8 21v-7l-2-5h12l-2 5v7M7 9l10 8"/></svg></span>
+            </div>
+        </div>
+
         <div id="avisos"></div>
     </div>
 
     <div id="opcoes" class="oculto">
         <div class="painel">
             <h1>HUD</h1>
+            <div class="linha">
+                <span>Tema</span>
+                <div class="grupo">
+                    <button data-tema="vice">Vice</button>
+                    <button data-tema="classico">Clássico</button>
+                </div>
+            </div>
             <div class="linha">
                 <span>Velocidade</span>
                 <div class="grupo">
@@ -85,6 +150,7 @@
             </div>
             <label class="linha check"><span>Bússola e nome da rua</span><input type="checkbox" id="op-bussola"></label>
             <label class="linha check"><span>Esconder fome, sede e colete cheios</span><input type="checkbox" id="op-cheio"></label>
+            <label class="linha check" id="op-dinheiro-linha"><span>Dinheiro sempre na tela</span><input type="checkbox" id="op-dinheiro"></label>
             <label class="linha check"><span>Modo cinema (esconde a HUD)</span><input type="checkbox" id="op-oculto"></label>
             <div class="acoes">
                 <button id="op-fechar">Fechar</button>
