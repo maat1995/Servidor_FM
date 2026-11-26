@@ -68,6 +68,10 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Bloqueia pegar do chão, baú, porta-malas, receber de outro jogador e comprar na loja; arma entregue direto por script cai no chão se passar do limite
   - Faca, taco, arremesso, taser e sinalizador ficam livres; `/armas` mostra quantas você carrega
   - Outros scripts podem perguntar antes de entregar: `exports.pa_armas_limite:podeCarregar(source, 'WEAPON_PISTOL')`
+- `resources/[pista]/pa_roda` — roda de armas e itens (estilo GTA 6)
+  - Segura **Z** (o TAB é do inventário): 8 espaços em volta (2 longas, 2 pistolas, desarmado, arremesso, branca e outros), mouse escolhe e soltar saca
+  - Mostra munição no pente/reserva e durabilidade; rolar o mouse troca entre armas do mesmo espaço; botão direito vai para a aba **Itens** (comida, kit, etc.)
+  - Usa a separação pistola/longa do `pa_armas_limite`
 - `resources/[ox]/ox_inventory` — itens, autopeças do mecânico e ícones
 - `resources/[qbx]/qbx_ambulancejob` — versão oficial com um ajuste: com o pa_medico ligado ele não manda alerta automático nem desenha a tela de morte
 - `resources/[qbx]/qbx_customs` — desempenho restrito a quem tem skill/mecânico

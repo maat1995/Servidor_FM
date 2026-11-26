@@ -5,11 +5,16 @@ lua54 'yes'
 name 'pa_armas_limite'
 author 'Pista & Asfalto RP'
 description 'Limite de armas no inventário: 2 pistolas e 2 armas longas (estilo GTA 6)'
-version '1.0.0'
+version '1.1.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
     'config.lua',
+    'shared/grupos.lua',
+}
+
+client_scripts {
+    'client/main.lua',
 }
 
 server_scripts {

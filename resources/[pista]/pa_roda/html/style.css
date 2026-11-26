@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;1,600&display=swap');
+
+:root {
+    --s: 1;
+    --rosa: #ED93B1;
+    --rosa-fundo: rgba(237, 147, 177, .2);
+    --texto: #F1EFE8;
+    --apagado: #B4B2A9;
+    --mudo: #888780;
+    --caixa: rgba(20, 20, 18, .62);
+    --borda: rgba(255, 255, 255, .14);
+    --fonte: 'Barlow Condensed', 'Arial Narrow', 'Rajdhani', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; font-family: var(--fonte); color: var(--texto); user-select: none; cursor: none; }
+.oculto { display: none !important; }
+
+#roda {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, .35) 0, rgba(0, 0, 0, .6) 60%);
+    animation: entra .12s ease-out;
+}
+@keyframes entra { from { opacity: 0; } }
+
+#anel {
+    position: absolute; left: 50%; top: 50%;
+    width: 620px; height: 560px;
+    transform: translate(-50%, -50%) scale(var(--s));
+}
+
+#abas { position: absolute; left: 50%; top: -6px; transform: translateX(-50%); display: flex; gap: 3px; z-index: 2; }
+#abas span {
+    font-size: 17px; font-weight: 600; letter-spacing: .5px; padding: 2px 16px;
+    background: rgba(255, 255, 255, .12); color: var(--apagado); text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+}
+#abas span.ativa { background: var(--rosa); color: #4B1528; text-shadow: none; }
+
+#ponteiro { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transition: transform .06s linear; }
+#ponteiro i {
+    position: absolute; left: -2px; top: -118px; width: 4px; height: 22px; border-radius: 2px;
+    background: var(--rosa); box-shadow: 0 0 10px rgba(237, 147, 177, .8);
+}
+
+#centro {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 210px; text-align: center; text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+}
+#c-nome { font-size: 26px; font-weight: 600; line-height: 1.05; }
+#c-sub { margin-top: 2px; font-size: 15px; color: var(--apagado); }
+#c-municao { margin-top: 8px; font-size: 30px; font-weight: 600; font-style: italic; color: var(--rosa); letter-spacing: .5px; }
+#c-municao small { font-size: 18px; color: var(--apagado); font-style: normal; }
+#c-extra { margin-top: 4px; font-size: 14px; color: var(--mudo); }
+
+.esp {
+    position: absolute; width: 132px; height: 88px;
+    transform: translate(-50%, -50%);
+    background: var(--caixa); border: 1px solid var(--borda);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: background .08s, border-color .08s, transform .08s;
+}
+.esp img { max-width: 104px; max-height: 46px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .7)); }
+.esp .rot { margin-top: 3px; font-size: 14px; font-weight: 500; color: var(--apagado); max-width: 124px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.esp .num { position: absolute; top: 3px; right: 6px; font-size: 13px; color: var(--texto); }
+.esp .mais { position: absolute; bottom: 3px; right: 6px; font-size: 12px; color: var(--rosa); }
+.esp .mao { position: absolute; top: 3px; left: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--rosa); }
+.esp .dur { position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; background: rgba(255, 255, 255, .12); }
+.esp .dur i { display: block; height: 100%; background: #97C459; }
+.esp .dur i.baixa { background: #E24B4A; }
+.esp.vazio { background: rgba(20, 20, 18, .3); border-style: dashed; border-color: rgba(255, 255, 255, .12); }
+.esp.vazio .rot { color: var(--mudo); }
+.esp .icone { width: 38px; height: 38px; fill: none; stroke: var(--apagado); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.esp.sel { background: var(--rosa-fundo); border: 2px solid var(--rosa); transform: translate(-50%, -50%) scale(1.07); }
+.esp.sel .rot { color: var(--texto); }
+.esp.sel .icone { stroke: var(--texto); }
+
+#dica {
+    position: absolute; left: 50%; bottom: 7vh; transform: translateX(-50%);
+    font-size: 16px; color: var(--apagado); letter-spacing: .3px; text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+}
