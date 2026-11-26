@@ -1,0 +1,203 @@
+/* ==================================================================
+   Pista & Asfalto RP - visual "Vice" da mochila (ox_inventory)
+   Só estilo por cima do original. Para voltar ao padrão, tire a linha
+   do vice.css no web/build/index.html.
+   ================================================================== */
+:root {
+    --v-rosa: #ED93B1;
+    --v-rosa-fundo: rgba(237, 147, 177, .14);
+    --v-texto: #F1EFE8;
+    --v-apagado: #D3D1C7;
+    --v-mudo: #888780;
+    --v-painel: rgba(14, 14, 13, .62);
+    --v-caixa: rgba(255, 255, 255, .06);
+    --v-borda: rgba(255, 255, 255, .09);
+    --v-fonte: 'Barlow Condensed', 'Arial Narrow', Roboto, sans-serif;
+}
+
+/* ---------- Painéis (você / baú / porta-malas / chão) ---------- */
+.inventory-wrapper { gap: 2.4vh; }
+.inventory-grid-wrapper {
+    gap: .7vh;
+    padding: 1.6vh 1.6vh 1.8vh;
+    background: var(--v-painel);
+    border: 1px solid var(--v-borda);
+}
+.inventory-grid-header-wrapper { align-items: baseline; }
+.inventory-grid-header-wrapper p {
+    font-family: var(--v-fonte);
+    font-size: 1.9vh;
+    font-weight: 500;
+    color: var(--v-apagado);
+    letter-spacing: .3px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+}
+.inventory-grid-header-wrapper p:first-child {
+    font-size: 2.5vh;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--v-texto);
+}
+.weight-bar {
+    height: .45vh;
+    border: none;
+    border-radius: 0;
+    background: rgba(255, 255, 255, .14);
+    margin-bottom: .6vh;
+}
+.weight-bar > div { background-color: var(--v-rosa) !important; }
+
+.inventory-grid-container { gap: 4px; }
+
+/* ---------- Espaços ---------- */
+.inventory-slot,
+.hotbar-item-slot,
+.item-notification-item-box {
+    background-color: var(--v-caixa);
+    border: 1px solid var(--v-borda);
+    border-radius: 0;
+    transition: background-color .12s, border-color .12s;
+}
+.inventory-slot:hover {
+    background-color: var(--v-rosa-fundo);
+    border-color: rgba(237, 147, 177, .65);
+}
+.inventory-slot-label-box {
+    background: rgba(0, 0, 0, .45);
+    border-top: none;
+    border-radius: 0;
+}
+.inventory-slot-label-text {
+    font-family: var(--v-fonte);
+    font-size: 1.5vh;
+    font-weight: 500;
+    letter-spacing: .3px;
+    text-transform: none;
+    color: var(--v-apagado);
+}
+.item-slot-info-wrapper p,
+.item-slot-wrapper p {
+    font-family: var(--v-fonte);
+    font-size: 1.45vh;
+    color: var(--v-texto);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+}
+
+/* Números dos favoritos (espaços 1 a 5, os que aparecem na roda) */
+.inventory-slot-number {
+    height: auto;
+    padding: 1px 6px;
+    background: transparent;
+    color: var(--v-rosa);
+    font-family: var(--v-fonte);
+    font-size: 1.6vh;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+}
+
+/* ---------- Faixa de cor por tipo de item ---------- */
+.inventory-slot::after,
+.hotbar-item-slot::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 3px;
+    background: transparent;
+    pointer-events: none;
+    z-index: 1;
+}
+/* armas e munição */
+[style*="WEAPON_"]::after { background: #ED93B1 !important; }
+[style*="/ammo-"]::after, [style*="_ammo.png"]::after { background: #F4C0D1 !important; }
+/* dinheiro limpo */
+[style*="/money.png"]::after, [style*="/bank_card"]::after, [style*="/card_bank"]::after { background: #97C459 !important; }
+/* ilegal: dinheiro sujo, drogas, coisas roubadas */
+[style*="/black_money"]::after, [style*="/markedbills"]::after, [style*="_roubad"]::after,
+[style*="/coca"]::after, [style*="/coke"]::after, [style*="/crack"]::after, [style*="/meth"]::after,
+[style*="/weed"]::after, [style*="/maconha"]::after, [style*="_maconha"]::after, [style*="/baseado"]::after,
+[style*="/joint"]::after, [style*="/oxy"]::after, [style*="/xtc"]::after, [style*="/lockpick"]::after,
+[style*="/advancedlockpick"]::after, [style*="/thermite"]::after, [style*="/rolex"]::after,
+[style*="/goldchain"]::after, [style*="/10kgoldchain"]::after, [style*="/diamond_ring"]::after { background: #F0997B !important; }
+/* cura e comida */
+[style*="/bandage"]::after, [style*="/firstaid"]::after, [style*="/ifaks"]::after, [style*="/medikit"]::after,
+[style*="/painkillers"]::after, [style*="/kit_trauma"]::after, [style*="/adrenalina"]::after, [style*="/desfibrilador"]::after,
+[style*="/water"]::after, [style*="/garrafa_agua"]::after, [style*="/sandwich"]::after, [style*="/burger"]::after,
+[style*="/coffee"]::after, [style*="/cola"]::after, [style*="/sprunk"]::after, [style*="/donut"]::after,
+[style*="/fries"]::after, [style*="/pizza"]::after, [style*="/tosti"]::after, [style*="/carne_assada"]::after,
+[style*="/beer"]::after, [style*="/wine"]::after, [style*="/whiskey"]::after, [style*="/vodka"]::after { background: #5DCAA5 !important; }
+/* peças e ferramentas de carro (pista_tuning) */
+[style*="/peca_"]::after, [style*="/chip_"]::after, [style*="/cambio_"]::after, [style*="/freio_"]::after,
+[style*="/pneu"]::after, [style*="/kit_"]::after, [style*="/suspensao"]::after, [style*="/notebook_remap"]::after,
+[style*="/garrafa_nitro"]::after, [style*="/junta_"]::after, [style*="/bielas"]::after, [style*="/cabecote"]::after,
+[style*="/repairkit"]::after, [style*="/tirerepairkit"]::after, [style*="/veh_"]::after, [style*="/macaco"]::after,
+[style*="/torquimetro"]::after, [style*="/jogo_soquetes"]::after, [style*="/guincho_motor"]::after,
+[style*="/laudo_dinamometro"]::after { background: #85B7EB !important; }
+/* lixo */
+[style*="/garbage"]::after, [style*="/trash"]::after { background: #888780 !important; }
+/* a faixa de cura de "kit_trauma" ganha da de peça "kit_" (vem depois) */
+[style*="/kit_trauma"]::after { background: #5DCAA5 !important; }
+
+/* ---------- Coluna do meio (quantidade e botões) ---------- */
+.inventory-control .inventory-control-wrapper { gap: 1.2vh; }
+.inventory-control .inventory-control-input {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 0;
+    background: var(--v-painel);
+    border-bottom: 2px solid var(--v-rosa);
+    font-family: var(--v-fonte);
+    font-size: 2.6vh;
+    font-weight: 600;
+    font-style: italic;
+    padding: 1.2vh 1vh;
+}
+.inventory-control .inventory-control-button {
+    border-radius: 0;
+    background: var(--v-painel);
+    border: 1px solid rgba(255, 255, 255, .16);
+    font-family: var(--v-fonte);
+    font-size: 1.9vh;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: none;
+    padding: 1.1vh 1vh;
+}
+.inventory-control .inventory-control-button:hover {
+    background: var(--v-rosa-fundo);
+    border-color: var(--v-rosa);
+}
+/* "Usar" em rosa */
+.inventory-control .inventory-control-button:first-of-type {
+    background: var(--v-rosa);
+    border-color: var(--v-rosa);
+    color: #4B1528;
+}
+.inventory-control .inventory-control-button:first-of-type:hover { background: #F4C0D1; }
+
+/* ---------- Dica, menu do botão direito e ajuda ---------- */
+.tooltip-wrapper,
+.context-menu-list,
+.useful-controls-dialog {
+    background: rgba(20, 20, 18, .96);
+    border: 1px solid var(--v-borda);
+    border-left: 3px solid var(--v-rosa);
+    border-radius: 0;
+    color: var(--v-apagado);
+}
+.tooltip-header-wrapper p { font-family: var(--v-fonte); font-size: 2vh; font-weight: 600; color: var(--v-texto); }
+.tooltip-wrapper p { font-family: var(--v-fonte); font-size: 1.55vh; }
+.context-menu-item { border-radius: 0; font-family: var(--v-fonte); font-size: 1.7vh; }
+.context-menu-item:hover { background: var(--v-rosa-fundo); }
+.useful-controls-button { border-radius: 0 !important; background: var(--v-painel) !important; border: 1px solid var(--v-borda) !important; }
+.useful-controls-button:hover { border-color: var(--v-rosa) !important; }
+.divider { background: rgba(237, 147, 177, .3); }
+
+/* ---------- Hotbar (F1) e avisos de item ---------- */
+.hotbar-container { gap: 4px; }
+.item-notification-action-box {
+    background: var(--v-rosa);
+    color: #4B1528;
+    border-radius: 0;
+    font-family: var(--v-fonte);
+}
+.item-notification-action-box p { font-size: 1.4vh; letter-spacing: .5px; }

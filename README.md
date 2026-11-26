@@ -75,6 +75,7 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Itens: usáveis + favoritos (espaços 1 a 5 do inventário, com estrela). Bolso: tudo que você carrega, só para ver. Embaixo: dinheiro e dinheiro sujo e o botão "Abrir mochila (I)"
   - Usa a separação pistola/longa do `pa_armas_limite`
 - `resources/[ox]/ox_inventory` — itens, autopeças do mecânico e ícones
+  - Visual **Vice** da mochila: `web/build/assets/vice.css` (carregado no `web/build/index.html`). Só estilo, por cima do original: painéis escuros, barra de peso rosa, favoritos 1-5 em rosa, botão Usar em destaque e faixa de cor por tipo de item (rosa arma, verde dinheiro, coral ilegal, verde-água cura/comida, azul peça de carro, cinza lixo). Se atualizar o ox_inventory, recolocar a linha do `vice.css` no `index.html`
 - `resources/[qbx]/qbx_ambulancejob` — versão oficial com um ajuste: com o pa_medico ligado ele não manda alerta automático nem desenha a tela de morte
 - `resources/[qbx]/qbx_customs` — desempenho restrito a quem tem skill/mecânico
 - `server.cfg.example` — configuração do servidor **sem** chave e senha
