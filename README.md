@@ -63,6 +63,11 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Prisão em Bolingbroke: pena em meses (1 mês = 1 min on-line), pertences devolvidos na saída, trabalhos reduzem a pena, fuga gera alerta e mandado
   - Fiscalização: blitz com cones/barreiras/tapete de pregos, vistoria das peças do pista_tuning (laudo do dinamômetro vale como vistoria), radares fixos com ANPR, radar móvel e pátio (comum ou retido) com o guincho
   - Perícia: cápsulas com número de série, sangue e digitais no volante; coleta com saco de evidência e laudo no laboratório da DP
+- `resources/[pista]/pa_armas_limite` — limite de armas no inventário (estilo GTA 6)
+  - No máximo **2 pistolas** e **2 armas longas** (sub, rifle, escopeta, sniper, metralhadora e pesadas)
+  - Bloqueia pegar do chão, baú, porta-malas, receber de outro jogador e comprar na loja; arma entregue direto por script cai no chão se passar do limite
+  - Faca, taco, arremesso, taser e sinalizador ficam livres; `/armas` mostra quantas você carrega
+  - Outros scripts podem perguntar antes de entregar: `exports.pa_armas_limite:podeCarregar(source, 'WEAPON_PISTOL')`
 - `resources/[ox]/ox_inventory` — itens, autopeças do mecânico e ícones
 - `resources/[qbx]/qbx_ambulancejob` — versão oficial com um ajuste: com o pa_medico ligado ele não manda alerta automático nem desenha a tela de morte
 - `resources/[qbx]/qbx_customs` — desempenho restrito a quem tem skill/mecânico
