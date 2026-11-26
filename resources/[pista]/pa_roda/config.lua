@@ -5,6 +5,9 @@ Config = {}
 -- Cada jogador pode trocar em Configurações > Atalhos > FiveM > "Roda de armas e itens"
 Config.tecla = 'Z'
 
+-- Mostra no F8 por que a roda não abriu (deixe false depois de testar)
+Config.debug = true
+
 -- Escurece e desfoca o fundo enquanto a roda está aberta
 Config.desfoque = true
 

@@ -17,7 +17,8 @@ end
 
 local function grupoArma(nome)
     if GetResourceState('pa_armas_limite') == 'started' then
-        return exports.pa_armas_limite:grupo(nome)
+        local ok, g = pcall(function() return exports.pa_armas_limite:grupo(nome) end)
+        if ok then return g end
     end
     local n = nome:upper()
     if n:find('PISTOL') or n:find('REVOLVER') then return 'pistola' end
@@ -139,11 +140,17 @@ end
 -- Abrir / fechar
 ---------------------------------------------------------------------
 local function podeAbrir()
-    if aberta or IsPauseMenuActive() or IsNuiFocused() then return false end
+    local motivo
     local st = LocalPlayer.state
-    if st.invOpen or st.invBusy or st.isDead or st.dead or IsEntityDead(cache.ped) then return false end
-    if IsPedCuffed(cache.ped) then return false end
-    return true
+    if aberta then motivo = 'já aberta'
+    elseif IsPauseMenuActive() then motivo = 'menu de pausa'
+    elseif IsNuiFocused() then motivo = 'outra tela com foco (NUI)'
+    elseif st.invOpen then motivo = 'inventário aberto'
+    elseif st.invBusy then motivo = 'inventário ocupado'
+    elseif st.isDead or st.dead or IsEntityDead(cache.ped) then motivo = 'morto'
+    elseif IsPedCuffed(cache.ped) then motivo = 'algemado' end
+    if motivo and Config.debug then print(('[pa_roda] não abriu: %s'):format(motivo)) end
+    return not motivo
 end
 
 local function fechar()
@@ -157,8 +164,14 @@ end
 
 local function abrir()
     if not podeAbrir() then return end
+    local ok, dados = pcall(montar)
+    if not ok then
+        print(('^1[pa_roda] erro ao montar a roda: %s^0'):format(dados))
+        return
+    end
     aberta = true
-    SendNUIMessage({ acao = 'abrir', dados = montar(), tecla = Config.tecla })
+    if Config.debug then print('[pa_roda] roda aberta') end
+    SendNUIMessage({ acao = 'abrir', dados = dados, tecla = Config.tecla })
     SetNuiFocus(true, true)
     SetNuiFocusKeepInput(Config.andarAberta)
     if Config.desfoque then TriggerScreenblurFadeIn(150) end
@@ -196,11 +209,17 @@ lib.addKeybind({
     name = 'pa_roda',
     description = 'Roda de armas e itens',
     defaultKey = Config.tecla,
-    onPressed = abrir,
+    onPressed = function()
+        if Config.debug then print('[pa_roda] tecla apertada') end
+        abrir()
+    end,
     onReleased = function()
         if aberta then SendNUIMessage({ acao = 'soltar' }) end
     end,
 })
+
+-- Teste sem tecla: /roda abre e o clique escolhe
+RegisterCommand('roda', function() abrir() end, false)
 
 ---------------------------------------------------------------------
 -- Escolha feita na roda
