@@ -69,8 +69,9 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Faca, taco, arremesso, taser e sinalizador ficam livres; `/armas` mostra quantas você carrega
   - Outros scripts podem perguntar antes de entregar: `exports.pa_armas_limite:podeCarregar(source, 'WEAPON_PISTOL')`
 - `resources/[pista]/pa_roda` — roda de armas e itens (estilo GTA 6)
-  - Segura **Z** (o TAB é do inventário): 8 espaços em volta (2 longas, 2 pistolas, desarmado, arremesso, branca e outros), mouse escolhe e soltar saca
-  - Mostra munição no pente/reserva e durabilidade; rolar o mouse troca entre armas do mesmo espaço; botão direito vai para a aba **Itens** (comida, kit, etc.)
+  - **TAB** abre e fecha (o inventário completo foi para o **I** no `ox.cfg`): 8 espaços em volta (2 longas, 2 pistolas, desarmado, arremesso, branca e outros), clique saca. `Config.modo = 'segurar'` volta para o jeito do GTA (segura e solta)
+  - Mostra munição no pente/reserva e durabilidade; rolar o mouse troca entre armas do mesmo espaço; botão direito passa pelas abas **Itens** e **Bolso**
+  - Itens: usáveis + favoritos (espaços 1 a 5 do inventário, com estrela). Bolso: tudo que você carrega, só para ver. Embaixo: dinheiro e dinheiro sujo e o botão "Abrir mochila (I)"
   - Usa a separação pistola/longa do `pa_armas_limite`
 - `resources/[ox]/ox_inventory` — itens, autopeças do mecânico e ícones
 - `resources/[qbx]/qbx_ambulancejob` — versão oficial com um ajuste: com o pa_medico ligado ele não manda alerta automático nem desenha a tela de morte

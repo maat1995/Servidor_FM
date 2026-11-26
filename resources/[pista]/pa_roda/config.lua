@@ -1,9 +1,21 @@
 Config = {}
 
--- Tecla da roda (segura para abrir, solta para escolher).
--- O TAB já abre o inventário (ox_inventory), por isso a roda fica no Z.
+-- Tecla da roda. O inventário completo passou para o I (ox.cfg: inventory:keys)
 -- Cada jogador pode trocar em Configurações > Atalhos > FiveM > "Roda de armas e itens"
-Config.tecla = 'Z'
+Config.tecla = 'TAB'
+
+-- 'alternar' = aperta para abrir e aperta de novo para fechar (clique escolhe)
+-- 'segurar'  = segura para abrir e solta para escolher (igual ao GTA)
+Config.modo = 'alternar'
+
+-- Espaços do inventário que são favoritos: aparecem primeiro na aba Itens
+Config.favoritos = 5
+
+-- Itens de dinheiro (mostrados embaixo da roda)
+Config.dinheiro = {
+    mao = { 'money', 'cash' },
+    sujo = { 'black_money', 'dirty_money', 'markedbills' },
+}
 
 -- Mostra no F8 por que a roda não abriu (deixe false depois de testar)
 Config.debug = true

@@ -16,7 +16,11 @@
     let sel = 4;
     let tecla = 'Z';
     let escolhido = false;
+    let modo = 'alternar';
+    let abertoEm = 0;
     const opcaoIdx = { armas: [0, 0, 0, 0, 0, 0, 0, 0], itens: [0, 0, 0, 0, 0, 0, 0, 0] };
+    const ABAS = ['armas', 'itens', 'bolso'];
+    const moeda = (v) => `$ ${Math.floor(Number(v) || 0).toLocaleString('pt-BR')}`;
 
     const escala = () => Math.min(window.innerHeight / 1080, window.innerWidth / 1920) * 1.0;
     function aplicarEscala() { document.documentElement.style.setProperty('--s', Math.max(0.7, escala()).toFixed(3)); }
@@ -87,6 +91,8 @@
         if (e.pente !== undefined && e.pente !== null) texto(el, 'num', `${e.pente}/${e.reserva || 0}`);
         else if (e.qtd && e.qtd > 1) texto(el, 'num', `${e.qtd}x`);
         if (total > 1) texto(el, 'mais', `+${total - 1}`);
+        if (e.favorito) texto(el, 'fav', '★');
+        if (e.semUso) el.classList.add('semuso');
         if (e.naMao) el.insertAdjacentHTML('beforeend', '<span class="mao"></span>');
         if (typeof e.durabilidade === 'number') {
             el.insertAdjacentHTML('beforeend', `<span class="dur"><i class="${e.durabilidade < 25 ? 'baixa' : ''}" style="width:${Math.max(0, Math.min(100, e.durabilidade))}%"></i></span>`);
@@ -109,7 +115,7 @@
             subTxt = alvo.naMao ? 'na mão' : 'guardar a arma';
         } else {
             nome.textContent = alvo.label;
-            subTxt = alvo.naMao ? 'na mão' : (pos ? TIPOS[pos.tipo] : '');
+            subTxt = alvo.naMao ? 'na mão' : alvo.semUso ? 'favorito · não tem uso direto' : alvo.favorito ? 'favorito' : (pos ? TIPOS[pos.tipo] : '');
         }
         sub.textContent = subTxt;
 
@@ -121,8 +127,34 @@
         if (e && total > 1) extra.textContent = `${k + 1} de ${total} · role para trocar`;
     }
 
+    function pintarBolso() {
+        const box = $('bolso');
+        box.innerHTML = '';
+        const itens = lista(dados.bolso);
+        if (!itens.length) {
+            texto(box, 'vazio-bolso', 'Bolso vazio');
+            return;
+        }
+        itens.slice(0, 20).forEach((it) => {
+            const el = document.createElement('div');
+            el.className = 'bi';
+            const img = document.createElement('img');
+            img.src = it.img;
+            img.onerror = () => img.remove();
+            el.appendChild(img);
+            texto(el, 'rot', it.label);
+            if (it.qtd > 1) texto(el, 'num', `${Number(it.qtd).toLocaleString('pt-BR')}x`);
+            box.appendChild(el);
+        });
+        if (itens.length > 20) texto(box, 'vazio-bolso', `+${itens.length - 20} itens na mochila`);
+    }
+
     function pintar() {
         document.querySelectorAll('#abas span').forEach((s) => s.classList.toggle('ativa', s.dataset.aba === aba));
+        const bolso = aba === 'bolso';
+        $('anel').classList.toggle('aba-bolso', bolso);
+        $('bolso').classList.toggle('oculto', !bolso);
+        if (bolso) { pintarBolso(); return; }
         for (let i = 0; i < 8; i++) pintarEspaco(i);
         pintarCentro();
     }
@@ -131,7 +163,7 @@
     // Mouse
     // ------------------------------------------------------------------
     document.addEventListener('mousemove', (ev) => {
-        if (!dados) return;
+        if (!dados || aba === 'bolso') return;
         const dx = ev.clientX - window.innerWidth / 2;
         const dy = ev.clientY - window.innerHeight / 2;
         if (Math.hypot(dx, dy) < 45 * escala()) return;
@@ -153,7 +185,7 @@
     }, { passive: true });
 
     function trocarAba(nova) {
-        aba = nova || (aba === 'armas' ? 'itens' : 'armas');
+        aba = nova || ABAS[(ABAS.indexOf(aba) + 1) % ABAS.length];
         pintar();
     }
 
@@ -161,12 +193,25 @@
     document.querySelectorAll('#abas span').forEach((s) => s.addEventListener('mousedown', (ev) => {
         ev.stopPropagation(); trocarAba(s.dataset.aba);
     }));
-    document.addEventListener('mousedown', (ev) => { if (dados && ev.button === 0) confirmar(); });
+    $('b-mochila').addEventListener('mousedown', (ev) => { ev.stopPropagation(); mochila(); });
+    document.addEventListener('mousedown', (ev) => {
+        if (!dados || ev.button !== 0) return;
+        if (aba === 'bolso') return;
+        confirmar();
+    });
 
+    const ehTecla = (ev) => ev.key && (ev.key.toUpperCase() === tecla || (tecla === 'TAB' && ev.key === 'Tab'));
+    document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Tab') ev.preventDefault();
+        if (!dados) return;
+        // modo alternar: a mesma tecla fecha
+        if (modo === 'alternar' && ehTecla(ev) && Date.now() - abertoEm > 200) cancelar();
+    });
     document.addEventListener('keyup', (ev) => {
         if (!dados) return;
         if (ev.key === 'Escape') return cancelar();
-        if (ev.key && ev.key.toUpperCase() === tecla) confirmar();
+        if (ev.key && ev.key.toUpperCase() === 'I') return mochila();
+        if (modo === 'segurar' && ehTecla(ev)) confirmar();
     });
 
     // ------------------------------------------------------------------
@@ -190,9 +235,16 @@
         escolhido = true;
         const { e } = atual(sel);
         esconder();
-        if (!e) return post('cancelar');
+        if (!e || e.semUso) return post('cancelar');
         if (e.desarmado) return post('escolher', { desarmado: true });
         post('escolher', { slot: e.slot, nome: e.nome });
+    }
+
+    function mochila() {
+        if (!dados) return;
+        escolhido = true;
+        esconder();
+        post('mochila');
     }
 
     function cancelar() {
@@ -209,7 +261,17 @@
         if (!data || !data.acao) return;
         if (data.acao === 'abrir') {
             dados = data.dados || { armas: [], itens: [] };
-            tecla = String(data.tecla || 'Z').toUpperCase();
+            tecla = String(data.tecla || 'TAB').toUpperCase();
+            modo = data.modo === 'segurar' ? 'segurar' : 'alternar';
+            abertoEm = Date.now();
+            const din = data.dados.dinheiro || {};
+            $('d-mao').textContent = moeda(din.mao);
+            $('d-sujo').textContent = moeda(din.sujo);
+            $('dinheiro').querySelector('.sujo').classList.toggle('oculto', !(din.sujo > 0));
+            const nomeTecla = tecla === 'TAB' ? 'TAB' : tecla;
+            $('dica').textContent = modo === 'segurar'
+                ? 'Solte para escolher · Role o mouse para trocar · Botão direito muda a aba'
+                : `Clique para escolher · ${nomeTecla} fecha · Role o mouse para trocar · Botão direito muda a aba`;
             escolhido = false;
             aba = 'armas';
             opcaoIdx.armas.fill(0); opcaoIdx.itens.fill(0);

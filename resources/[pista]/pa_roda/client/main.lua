@@ -2,11 +2,16 @@
 
 local ox = exports.ox_inventory
 local aberta = false
+local abertaEm = 0
 local defs = nil
 local listaFora, ordemPref = {}, {}
 
 for _, n in ipairs(Config.itensFora) do listaFora[n] = true end
 for i, n in ipairs(Config.itensPreferidos) do ordemPref[n] = i end
+
+local dinheiroMao, dinheiroSujo = {}, {}
+for _, n in ipairs(Config.dinheiro.mao) do dinheiroMao[n] = true end
+for _, n in ipairs(Config.dinheiro.sujo) do dinheiroSujo[n] = true end
 
 local OUTROS = { WEAPON_STUNGUN = true, WEAPON_STUNGUN_MP = true, WEAPON_FLAREGUN = true }
 
@@ -72,6 +77,8 @@ local function montar()
 
     local g = { longa = {}, pistola = {}, branca = {}, arremesso = {}, outros = {} }
     local usaveis = {}
+    local bolso = {}
+    local dinheiro = { mao = 0, sujo = 0 }
 
     local ordenados = {}
     for _, it in pairs(itens) do ordenados[#ordenados + 1] = it end
@@ -87,16 +94,29 @@ local function montar()
                 else grp = 'branca' end
             end
             g[grp][#g[grp] + 1] = entradaArma(it, def, itens, atual)
-        elseif def and not def.ammo and not def.component and not listaFora[it.name] and not it.name:find('^ammo') then
-            local c = def.client
-            local usavel = ordemPref[it.name] or (c and (c.status or c.usetime or c.export or c.event or c.anim)) or def.export
-            if usavel then
-                usaveis[#usaveis + 1] = {
-                    slot = it.slot, nome = it.name, qtd = it.count,
-                    label = it.metadata and it.metadata.label or it.label or def.label or it.name,
-                    img = imagem(it.name, def),
-                    ordem = ordemPref[it.name] or (100 + it.slot),
-                }
+        elseif def then
+            local label = it.metadata and it.metadata.label or it.label or def.label or it.name
+            if dinheiroMao[it.name] then dinheiro.mao = dinheiro.mao + (it.count or 0) end
+            if dinheiroSujo[it.name] then dinheiro.sujo = dinheiro.sujo + (it.count or 0) end
+
+            -- Bolso: tudo que não é arma (só para ver)
+            if not dinheiroMao[it.name] then
+                bolso[#bolso + 1] = { slot = it.slot, nome = it.name, label = label, qtd = it.count, img = imagem(it.name, def) }
+            end
+
+            if not def.ammo and not def.component and not listaFora[it.name] and not it.name:find('^ammo') then
+                local c = def.client
+                local usavel = (c and (c.status or c.usetime or c.export or c.event or c.anim)) or def.export
+                local favorito = it.slot <= Config.favoritos
+                if favorito or usavel or ordemPref[it.name] then
+                    usaveis[#usaveis + 1] = {
+                        slot = it.slot, nome = it.name, qtd = it.count, label = label,
+                        img = imagem(it.name, def),
+                        favorito = favorito or nil,
+                        semUso = not (usavel or ordemPref[it.name]) or nil,
+                        ordem = favorito and it.slot or ordemPref[it.name] and (10 + ordemPref[it.name]) or (100 + it.slot),
+                    }
+                end
             end
         end
     end
@@ -133,7 +153,7 @@ local function montar()
         end
     end
 
-    return { armas = armas, itens = itensRoda, naMao = naMao }
+    return { armas = armas, itens = itensRoda, bolso = bolso, dinheiro = dinheiro, naMao = naMao }
 end
 
 ---------------------------------------------------------------------
@@ -170,8 +190,9 @@ local function abrir()
         return
     end
     aberta = true
+    abertaEm = GetGameTimer()
     if Config.debug then print('[pa_roda] roda aberta') end
-    SendNUIMessage({ acao = 'abrir', dados = dados, tecla = Config.tecla })
+    SendNUIMessage({ acao = 'abrir', dados = dados, tecla = Config.tecla, modo = Config.modo })
     SetNuiFocus(true, true)
     SetNuiFocusKeepInput(Config.andarAberta)
     if Config.desfoque then TriggerScreenblurFadeIn(150) end
@@ -205,16 +226,22 @@ local function abrir()
     end)
 end
 
+-- O nome do atalho mudou (pa_roda_tab) para o FiveM usar a tecla nova de padrão
 lib.addKeybind({
-    name = 'pa_roda',
+    name = 'pa_roda_tab',
     description = 'Roda de armas e itens',
     defaultKey = Config.tecla,
     onPressed = function()
         if Config.debug then print('[pa_roda] tecla apertada') end
+        if aberta then
+            -- modo alternar: apertar de novo fecha (ignora o mesmo toque que abriu)
+            if Config.modo == 'alternar' and GetGameTimer() - abertaEm > 200 then fechar() end
+            return
+        end
         abrir()
     end,
     onReleased = function()
-        if aberta then SendNUIMessage({ acao = 'soltar' }) end
+        if aberta and Config.modo == 'segurar' then SendNUIMessage({ acao = 'soltar' }) end
     end,
 })
 
@@ -245,6 +272,12 @@ RegisterNUICallback('escolher', function(data, cb)
     if not it or (data.nome and it.name ~= data.nome) then return end
 
     SetTimeout(50, function() ox:useSlot(slot) end)
+end)
+
+RegisterNUICallback('mochila', function(_, cb)
+    cb('ok')
+    fechar()
+    SetTimeout(100, function() ox:openInventory() end)
 end)
 
 RegisterNUICallback('cancelar', function(_, cb)
