@@ -1,6 +1,8 @@
 -- pa_hud - cliente
 
 local KVP = 'pa_hud_opcoes'
+local KVP_POS = 'pa_hud_posicoes'
+local posicoes = { vice = {}, classico = {} }
 local opcoes = {}
 local ocultoPorScript = false
 local inventarioAberto = false
@@ -35,10 +37,42 @@ local function validarOpcoes(t)
     return novo
 end
 
+-- Posições que o jogador escolheu no "Mover HUD" (em % da tela)
+local MOVEIS = {
+    vice = { ['v-status'] = true, ['v-bussola'] = true, ['v-dinheiro'] = true, ['v-velo'] = true, avisos = true },
+    classico = { status = true, bussola = true, velocimetro = true, avisos = true },
+}
+
+local function validarPosicoes(t)
+    local novo = { vice = {}, classico = {} }
+    if type(t) ~= 'table' then return novo end
+    for tema, ids in pairs(MOVEIS) do
+        local lista = type(t[tema]) == 'table' and t[tema] or {}
+        for id in pairs(ids) do
+            local p = lista[id]
+            if type(p) == 'table' and tonumber(p.x) and tonumber(p.y) then
+                novo[tema][id] = {
+                    x = math.max(0, math.min(100, tonumber(p.x))),
+                    y = math.max(0, math.min(100, tonumber(p.y))),
+                }
+            end
+        end
+    end
+    return novo
+end
+
+local function carregarPosicoes()
+    local salvo = GetResourceKvpString(KVP_POS)
+    if not salvo then return end
+    local ok, t = pcall(json.decode, salvo)
+    if ok then posicoes = validarPosicoes(t) end
+end
+
 local function enviarConfig()
     SendNUIMessage({
         acao = 'config',
         opcoes = opcoes,
+        posicoes = posicoes,
         cfg = {
             rpmVermelho = Config.rpmVermelho,
             limiteCheio = Config.limiteCheio,
@@ -297,6 +331,7 @@ end
 
 CreateThread(function()
     carregarOpcoes()
+    carregarPosicoes()
     Wait(500)
     enviarConfig()
 
@@ -394,6 +429,16 @@ end)
 
 RegisterNUICallback('fechar', function(_, cb)
     SetNuiFocus(false, false)
+    cb('ok')
+end)
+
+RegisterNUICallback('salvarPosicoes', function(data, cb)
+    if type(data) == 'table' and not data.cancelar then
+        posicoes = validarPosicoes(data.posicoes)
+        SetResourceKvp(KVP_POS, json.encode(posicoes))
+    end
+    SetNuiFocus(false, false)
+    enviarConfig()
     cb('ok')
 end)
 

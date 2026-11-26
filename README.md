@@ -29,6 +29,7 @@ Servidor FiveM (base Qbox) focado no mundo dos carros: preparação, mecânica e
   - Substitui o qbx_hud (`stop qbx_hud` no server.cfg): estresse (tiro, tela embaçada), indicador de cinto, `/banco` e `/dinheiro`
   - Tema **Vice** (padrão, estilo GTA 6): barras finas no topo esquerdo que aparecem quando mudam, bússola em faixa com pontos do mapa (mecânica, corrida, GPS) que pisca vermelho/azul com viatura de sirene perto, dinheiro no topo direito, moldura no minimapa com distância do GPS e velocímetro com número grande e conta-giros em barra. O tema **Clássico** continua no `/hud`
   - `exports.pa_hud:perseguicao(true)` acende a bússola de perseguição por outro script
+  - `/hud` > **Mover HUD**: cada jogador arrasta status, bússola, dinheiro, velocímetro e avisos para onde quiser (salvo no PC dele, separado por tema; "Restaurar padrão" volta ao original)
 - `resources/[pista]/pa_handling` — handling realista
   - Cada carro com a ficha do carro real de inspiração (cv, peso, tração, marchas, 0-100, velocidade final)
   - ~200 nativos com ficha real; o resto com ficha automática na faixa realista da classe

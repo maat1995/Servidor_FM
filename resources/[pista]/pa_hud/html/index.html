@@ -152,11 +152,21 @@
             <label class="linha check"><span>Esconder fome, sede e colete cheios</span><input type="checkbox" id="op-cheio"></label>
             <label class="linha check" id="op-dinheiro-linha"><span>Dinheiro sempre na tela</span><input type="checkbox" id="op-dinheiro"></label>
             <label class="linha check"><span>Modo cinema (esconde a HUD)</span><input type="checkbox" id="op-oculto"></label>
+            <div class="linha">
+                <span>Posição das partes da HUD</span>
+                <button id="op-mover" class="botao">Mover HUD</button>
+            </div>
             <div class="acoes">
                 <button id="op-fechar">Fechar</button>
                 <button id="op-salvar" class="principal">Salvar</button>
             </div>
         </div>
+    </div>
+
+    <div id="editor" class="oculto">
+        <span>Arraste as partes da HUD para onde quiser</span>
+        <button id="ed-restaurar">Restaurar padrão</button>
+        <button id="ed-concluir" class="principal">Concluir</button>
     </div>
 
     <script src="app.js"></script>

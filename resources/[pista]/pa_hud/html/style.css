@@ -237,3 +237,43 @@ html, body {
 }
 #dash-alerta.atencao { background: #3ba4ff; }
 #dash-alerta.perigo { background: var(--vermelho); }
+
+/* ------------------------------------------------------------------
+   Mover HUD (/hud > Mover HUD)
+   ------------------------------------------------------------------ */
+.movido { right: auto !important; bottom: auto !important; transform: scale(var(--s)) !important; transform-origin: top left !important; }
+.linha .botao {
+    font-family: inherit; font-size: 15px; font-weight: 700; padding: 5px 14px; border-radius: 5px;
+    border: 1px solid var(--ambar); background: transparent; color: var(--ambar); cursor: pointer;
+}
+.linha .botao:hover { background: var(--ambar); color: #412402; }
+
+body.editando #hud { display: block !important; }
+body.editando .movel { outline: 2px dashed rgba(237, 147, 177, .9); outline-offset: 6px; cursor: move; min-width: 120px; min-height: 36px; }
+body.editando .movel.arrastando { outline-style: solid; }
+body.editando .movel::after {
+    content: attr(data-nome); position: absolute; left: 0; top: 0; transform: translateY(-115%); z-index: 2;
+    font: 700 13px 'Rajdhani', sans-serif; letter-spacing: .3px; white-space: nowrap;
+    padding: 1px 8px; border-radius: 3px; background: #ED93B1; color: #4B1528;
+}
+body.editando .movel.oculto,
+body.editando #v-velo.oculto,
+body.editando #velocimetro.oculto { display: block !important; }
+body.editando .vb.some { opacity: 1 !important; transform: none !important; height: auto !important; margin-top: 0 !important; }
+body.editando #v-dinheiro.some { opacity: 1 !important; }
+body.editando #avisos { min-width: 220px; min-height: 40px; }
+body.editando #v-bussola { display: block !important; }
+
+#editor {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px;
+    background: rgba(26, 26, 24, .94); border: 1px solid var(--borda);
+    font-size: 16px; font-weight: 500; color: var(--texto); z-index: 10;
+}
+#editor button {
+    font-family: inherit; font-size: 15px; font-weight: 700; padding: 5px 14px; border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, .18); background: transparent; color: var(--apagado); cursor: pointer;
+}
+#editor button:hover { color: var(--texto); }
+#editor button.principal { background: var(--ambar); border-color: var(--ambar); color: #412402; }
+body.editando .movel.no-topo::after { transform: none; top: auto; bottom: 0; transform: translateY(115%); }

@@ -75,7 +75,7 @@
 
     function posicionarStatus() {
         const st = $('status');
-        if (!ancora) return;
+        if (!ancora || st.classList.contains('movido')) return;
         const W = window.innerWidth, H = window.innerHeight;
         st.style.left = `${ancora.esquerda * W}px`;
         st.style.width = `${Math.max(200, (ancora.largura * W) / escala())}px`;
@@ -504,6 +504,106 @@
         $('op-oculto').checked = rascunho.oculto;
     }
 
+    // ------------------------------------------------------------------
+    // Mover HUD: cada parte pode ser arrastada e fica salva no PC do jogador
+    // ------------------------------------------------------------------
+    const MOVEIS = {
+        vice: [['v-status', 'Status e voz'], ['v-bussola', 'Bússola'], ['v-dinheiro', 'Dinheiro'], ['v-velo', 'Velocímetro'], ['avisos', 'Avisos de XP']],
+        classico: [['status', 'Status e voz'], ['bussola', 'Bússola'], ['velocimetro', 'Velocímetro'], ['avisos', 'Avisos de XP']],
+    };
+    let posicoes = { vice: {}, classico: {} };
+    let editando = false;
+    let arrasto = null;
+    const temaAtual = () => (opcoes.tema === 'classico' ? 'classico' : 'vice');
+
+    function limparPosicao(el) {
+        el.classList.remove('movido');
+        el.style.left = ''; el.style.top = ''; el.style.right = ''; el.style.bottom = '';
+    }
+
+    function aplicarPosicoes() {
+        const W = window.innerWidth, H = window.innerHeight;
+        for (const tema of Object.keys(MOVEIS)) {
+            for (const [id] of MOVEIS[tema]) {
+                const el = $(id);
+                if (!el) continue;
+                limparPosicao(el);
+                const p = tema === temaAtual() && posicoes[tema] && posicoes[tema][id];
+                if (p) {
+                    el.classList.add('movido');
+                    el.style.left = `${(p.x / 100) * W}px`;
+                    el.style.top = `${(p.y / 100) * H}px`;
+                }
+            }
+        }
+        posicionarStatus();
+    }
+
+    function entrarEdicao() {
+        editando = true;
+        $('opcoes').classList.add('oculto');
+        document.body.classList.add('editando');
+        $('editor').classList.remove('oculto');
+        for (const [id, nome] of MOVEIS[temaAtual()]) {
+            const el = $(id);
+            if (!el) continue;
+            el.classList.add('movel');
+            el.dataset.nome = nome;
+            el.classList.toggle('no-topo', el.getBoundingClientRect().top < 40);
+        }
+    }
+
+    function sairEdicao(salvar) {
+        editando = false;
+        arrasto = null;
+        document.body.classList.remove('editando');
+        $('editor').classList.add('oculto');
+        document.querySelectorAll('.movel').forEach((el) => el.classList.remove('movel', 'arrastando', 'no-topo'));
+        fetch(`https://${recurso}/salvarPosicoes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+            body: JSON.stringify(salvar ? { posicoes } : { cancelar: true }),
+        }).catch(() => {});
+    }
+
+    document.addEventListener('mousedown', (ev) => {
+        if (!editando || ev.button !== 0) return;
+        const el = ev.target.closest('.movel');
+        if (!el) return;
+        ev.preventDefault();
+        const r = el.getBoundingClientRect();
+        el.classList.add('movido', 'arrastando');
+        el.style.left = `${r.left}px`;
+        el.style.top = `${r.top}px`;
+        arrasto = { el, dx: ev.clientX - r.left, dy: ev.clientY - r.top, w: r.width, h: r.height };
+    });
+    document.addEventListener('mousemove', (ev) => {
+        if (!arrasto) return;
+        const W = window.innerWidth, H = window.innerHeight;
+        const x = Math.max(0, Math.min(W - arrasto.w, ev.clientX - arrasto.dx));
+        const y = Math.max(0, Math.min(H - arrasto.h, ev.clientY - arrasto.dy));
+        arrasto.el.style.left = `${x}px`;
+        arrasto.el.style.top = `${y}px`;
+    });
+    document.addEventListener('mouseup', () => {
+        if (!arrasto) return;
+        const { el } = arrasto;
+        el.classList.remove('arrastando');
+        el.classList.toggle('no-topo', el.getBoundingClientRect().top < 40);
+        const W = window.innerWidth, H = window.innerHeight;
+        const tema = temaAtual();
+        posicoes[tema] = posicoes[tema] || {};
+        posicoes[tema][el.id] = {
+            x: Math.round((parseFloat(el.style.left) / W) * 10000) / 100,
+            y: Math.round((parseFloat(el.style.top) / H) * 10000) / 100,
+        };
+        arrasto = null;
+    });
+    $('ed-concluir').addEventListener('click', () => sairEdicao(true));
+    $('ed-restaurar').addEventListener('click', () => { posicoes[temaAtual()] = {}; aplicarPosicoes(); });
+    $('op-mover').addEventListener('click', () => entrarEdicao());
+    window.addEventListener('resize', aplicarPosicoes);
+
     function abrirOpcoes(o) {
         rascunho = { ...opcoes, ...(o || {}) };
         pintarOpcoes();
@@ -518,7 +618,7 @@
             headers: { 'Content-Type': 'application/json; charset=UTF-8' },
             body: JSON.stringify(salvar ? rascunho : {}),
         }).catch(() => {});
-        if (salvar) { opcoes = { ...rascunho }; aplicarEscala(); aplicarTema(); }
+        if (salvar) { opcoes = { ...rascunho }; aplicarEscala(); aplicarTema(); aplicarPosicoes(); }
     }
 
     document.querySelectorAll('[data-unidade]').forEach((b) =>
@@ -533,7 +633,9 @@
     $('op-salvar').addEventListener('click', () => fecharOpcoes(true));
     $('op-fechar').addEventListener('click', () => fecharOpcoes(false));
     document.addEventListener('keyup', (e) => {
-        if (e.key === 'Escape' && !$('opcoes').classList.contains('oculto')) fecharOpcoes(false);
+        if (e.key !== 'Escape') return;
+        if (editando) return sairEdicao(true);
+        if (!$('opcoes').classList.contains('oculto')) fecharOpcoes(false);
     });
 
     // ------------------------------------------------------------------
@@ -545,10 +647,16 @@
             case 'config':
                 if (data.opcoes) opcoes = { ...opcoes, ...data.opcoes };
                 if (data.cfg) cfg = { ...cfg, ...data.cfg };
+                if (data.posicoes && typeof data.posicoes === 'object') {
+                    posicoes = { vice: data.posicoes.vice || {}, classico: data.posicoes.classico || {} };
+                    if (Array.isArray(posicoes.vice)) posicoes.vice = {};
+                    if (Array.isArray(posicoes.classico)) posicoes.classico = {};
+                }
                 montarGiro();
                 pintarSegs();
                 aplicarEscala();
                 aplicarTema();
+                aplicarPosicoes();
                 break;
             case 'ancora':
                 ancora = data.ancora;
