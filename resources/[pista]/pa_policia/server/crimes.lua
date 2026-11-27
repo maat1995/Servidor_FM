@@ -31,8 +31,11 @@ end
 function P.Crime(src, tipo, info)
     local cfg = Config.crimes and Config.crimes[tipo]
     if not cfg or not cfg.ativo then return end
-    if P.EmServico(src) then return end
-    if P.PoliciaisEmServico() == 0 then return end
+    if P.EmServico(src) and not Config.crimesModoTeste then return end
+    if P.PoliciaisEmServico() == 0 then
+        if Config.Debug then print(('[pa_policia] crime %s de %s ignorado: nenhum policial em serviço'):format(tipo, src)) end
+        return
+    end
 
     local chave = src .. ':' .. tipo
     if os.time() - (espera[chave] or 0) < cfg.espera then return end

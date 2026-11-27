@@ -173,6 +173,9 @@ Config.crimes = {
 }
 -- dois avisos iguais perto um do outro viram um só (gangue atirando junto)
 Config.crimesAgrupar = { distancia = 80.0, segundos = 45 }
+-- MODO TESTE: true = o policial em serviço também gera aviso (dá para testar sozinho,
+-- atirando e vendo o aviso chegar). Deixe false no servidor aberto.
+Config.crimesModoTeste = false
 
 -- Botão de pânico
 Config.panico = {

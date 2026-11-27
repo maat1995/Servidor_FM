@@ -65,21 +65,24 @@ RegisterNetEvent('pa_policia:server:tiro', function(coords, info)
     if GetGameTimer() - (ultimaCapsula[src] or 0) < 900 then return end
     ultimaCapsula[src] = GetGameTimer()
     local arma = exports.ox_inventory:GetCurrentWeapon(src)
-    if not arma or not arma.name or Config.pericia.semCapsula[arma.name] then return end
+    if arma and arma.name and Config.pericia.semCapsula[arma.name] then return end
 
     ultimoTiro[src] = os.time()
     local policial = P.EmServico(src)
 
-    local m = arma.metadata or {}
-    criar('capsula', coords, ('Cápsula · %s'):format(rotuloArma(arma.name)), {
-        arma = arma.name,
-        serial = m.serial,
-        registrada = m.registered,
-        policial = policial,
-    })
+    -- cápsula só de arma do inventário (tem número de série); arma dada por admin/spawn não deixa
+    if arma and arma.name then
+        local m = arma.metadata or {}
+        criar('capsula', coords, ('Cápsula · %s'):format(rotuloArma(arma.name)), {
+            arma = arma.name,
+            serial = m.serial,
+            registrada = m.registered,
+            policial = policial,
+        })
+    end
 
-    -- alerta de disparo (testemunha liga para o 190)
-    if not policial then
+    -- alerta de disparo (testemunha liga para o 190), com ou sem cápsula
+    if not policial or Config.crimesModoTeste then
         info = type(info) == 'table' and info or {}
         P.Crime(src, info.veiculo and 'tiroVeiculo' or 'tiro', info)
     end
